@@ -310,7 +310,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div class="tablewrap">
         <table class="dt" id="tbl-registros">
           <thead><tr>
-            <th>Região</th><th>Status</th><th>Tipo</th><th>Nº OS</th><th>Cliente</th><th>Base</th><th>Técnico</th>
+            <th>Região</th><th>Status</th><th>Tipo</th><th>Nº OS</th><th>Data Abertura</th><th>Cliente</th><th>Base</th><th>Técnico</th>
             <th class="r">Horas</th><th class="r">Valor (R$)</th><th>NFS-e</th><th>Data Fat.</th><th>Forma Pgto</th>
             <th>Situação</th><th>Observação</th><th></th>
           </tr></thead>
@@ -490,7 +490,7 @@ function defaultState(){
       situacoes:{faturado:'Faturado', pendente:'Pendente', naoAplica:'Não se aplica'},
       chaveBaixaInterna:'BAIXA INTERNA'
     },
-    registros:{} // "id": {regiao,status,tipo,numeroOS,cliente,base,tecnico,horas,valor,nfse,dataFaturamento,formaPagamento,observacao}
+    registros:{} // "id": {regiao,status,tipo,numeroOS,dataAbertura,cliente,base,tecnico,horas,valor,nfse,dataFaturamento,formaPagamento,observacao}
   };
 }
 
@@ -800,6 +800,7 @@ function linhaRegistro(id, r){
     <td><select data-f="status">${buildOptions(cfg.statusOS, r.status)}</select></td>
     <td><select data-f="tipo">${buildOptions(cfg.tiposOS, r.tipo)}</select></td>
     <td><input type="text" data-f="numeroOS" value="${escapeHtml(r.numeroOS||'')}" style="min-width:60px;"></td>
+    <td><input type="date" data-f="dataAbertura" value="${escapeHtml(r.dataAbertura||'')}"></td>
     <td><input type="text" data-f="cliente" value="${escapeHtml(r.cliente||'')}" style="min-width:160px;"></td>
     <td><select data-f="base">${buildOptions(cfg.bases, r.base)}</select></td>
     <td><select data-f="tecnico">${buildOptions(cfg.tecnicos, r.tecnico)}</select></td>
@@ -819,7 +820,7 @@ function renderRegistros(){
   let horasT=0, valorT=0;
   entries.forEach(([,r])=>{ horasT+=n(r.horas); valorT+=n(r.valor); });
   tb.innerHTML = entries.map(([id,r])=>linhaRegistro(id,r)).join('')
-    + `<tr class="total-row"><td colspan="7">TOTAL (${int(entries.length)} OS)</td>
+    + `<tr class="total-row"><td colspan="8">TOTAL (${int(entries.length)} OS)</td>
         <td class="num">${horasFmt(horasT)}</td><td class="num">${brl(valorT)}</td><td colspan="6"></td></tr>`;
 
   tb.querySelectorAll('tr[data-id]').forEach(tr=>{
@@ -862,7 +863,7 @@ document.getElementById('btn-add-os').addEventListener('click', ()=>{
   const id=uid();
   state.registros[id]={
     regiao:cfg.regioes[0]||'', status:cfg.statusOS[0]||'', tipo:cfg.tiposOS[0]||'',
-    numeroOS:'', cliente:'', base:cfg.bases[0]||'', tecnico:cfg.tecnicos[0]||'',
+    numeroOS:'', dataAbertura:isoStr(new Date()), cliente:'', base:cfg.bases[0]||'', tecnico:cfg.tecnicos[0]||'',
     horas:0, valor:0, nfse:'', dataFaturamento:'', formaPagamento:cfg.formasPagamento[0]||'', observacao:''
   };
   dirtyReg.add(id); save(); renderRegistros(); toast('OS adicionada — preencha os dados na tabela.');
@@ -877,10 +878,10 @@ function download(name, content, type){
   a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),500);
 }
 document.getElementById('btn-export-csv').addEventListener('click', ()=>{
-  let csv='Regiao;Status;Tipo;NumeroOS;Cliente;Base;Tecnico;Horas;Valor;NFSe;DataFaturamento;FormaPagamento;Situacao;Observacao\n';
+  let csv='Regiao;Status;Tipo;NumeroOS;DataAbertura;Cliente;Base;Tecnico;Horas;Valor;NFSe;DataFaturamento;FormaPagamento;Situacao;Observacao\n';
   ordenarRegistros().forEach(([,r])=>{
     const sit=computeSituacao(r);
-    csv+=`${r.regiao||''};${r.status||''};${r.tipo||''};${r.numeroOS||''};${(r.cliente||'').replace(/;/g,',')};${r.base||''};${r.tecnico||''};${(n(r.horas)).toFixed(2)};${(n(r.valor)).toFixed(2)};${r.nfse||''};${r.dataFaturamento||''};${r.formaPagamento||''};${sit};${(r.observacao||'').replace(/;/g,',')}\n`;
+    csv+=`${r.regiao||''};${r.status||''};${r.tipo||''};${r.numeroOS||''};${r.dataAbertura||''};${(r.cliente||'').replace(/;/g,',')};${r.base||''};${r.tecnico||''};${(n(r.horas)).toFixed(2)};${(n(r.valor)).toFixed(2)};${r.nfse||''};${r.dataFaturamento||''};${r.formaPagamento||''};${sit};${(r.observacao||'').replace(/;/g,',')}\n`;
   });
   download('faturamento_assistencia_tecnica.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV exportado.');
