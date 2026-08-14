@@ -326,16 +326,27 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <p class="pane-desc">Configuração das listas usadas nos lançamentos e nos painéis. Alterações recalculam o app inteiro.</p>
 
     <div class="card">
-      <h3>Regiões e Meta de Faturamento</h3>
+      <h3>Período da Meta</h3>
+      <p class="pane-desc" style="margin:0 0 10px;">Intervalo (em dias úteis, Seg–Sex) em que a Meta de Faturamento de cada região está em vigor. A Meta do Mês e a Meta da Semana (Painel Geral e aba Regional) rateiam esse valor proporcionalmente aos dias úteis do mês/semana selecionados, dentro deste período.</p>
+      <div class="grid" style="max-width:640px;">
+        <div class="field"><label>Data Início</label><input type="date" id="p-periodo-inicio"></div>
+        <div class="field"><label>Data Fim</label><input type="date" id="p-periodo-fim"></div>
+        <div class="field readonly"><label>Dias Úteis no Período</label><input type="text" id="p-periodo-diasuteis" disabled></div>
+      </div>
+      <div class="note" id="p-periodo-aviso" style="display:none;">Preencha Data Início e Data Fim (fim não pode ser antes do início) para as metas de mês/semana serem calculadas.</div>
+    </div>
+
+    <div class="card">
+      <h3>Regiões e Meta de Faturamento (do Período acima)</h3>
       <div class="tablewrap" style="margin-bottom:10px;">
         <table class="dt" id="tbl-p-regioes">
-          <thead><tr><th>Região</th><th class="r">Meta de Faturamento (R$)</th><th style="width:70px;"></th></tr></thead>
+          <thead><tr><th>Região</th><th class="r">Meta do Período (R$)</th><th style="width:70px;"></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Nova região</label><input type="text" id="p-reg-nome" placeholder="ex: Regional III"></div>
-        <div class="field" style="margin:0;"><label>Meta (R$)</label><input type="number" id="p-reg-meta" step="1000" style="width:140px;"></div>
+        <div class="field" style="margin:0;"><label>Meta do Período (R$)</label><input type="number" id="p-reg-meta" step="1000" style="width:160px;"></div>
         <button class="btn primary small" id="btn-add-regiao" type="button">+ Região</button>
       </div>
     </div>
@@ -465,6 +476,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
    registros: objeto indexado por id estável — uma entrada por OS.
    ========================================================================= */
 function defaultState(){
+  const [pIni,pFim]=defaultPeriodo();
   return {
     config:{
       regioes:['Regional I','Regional II'],
@@ -474,6 +486,7 @@ function defaultState(){
       bases:['PALMAS - 01','CRISTALINA - 07','PARACATU - 08','FORMOSA - 10','NOVA CRIXÁS - 12'],
       formasPagamento:['IRRICONTROL - BOLETO','BAUER - BOLETO','CLIENTE','BAIXA INTERNA'],
       metas:{'Regional I':500000,'Regional II':500000},
+      periodoInicio:pIni, periodoFim:pFim, // intervalo (dias úteis) em que a meta acima está em vigor
       situacoes:{faturado:'Faturado', pendente:'Pendente', naoAplica:'Não se aplica'},
       chaveBaixaInterna:'BAIXA INTERNA'
     },
@@ -493,6 +506,7 @@ function withDefaults(s){
   s.config.metas=Object.assign({}, d.config.metas, s.config.metas||{});
   s.config.situacoes=Object.assign({}, d.config.situacoes, s.config.situacoes||{});
   if(!s.config.chaveBaixaInterna) s.config.chaveBaixaInterna=d.config.chaveBaixaInterna;
+  if(!s.config.periodoInicio||!s.config.periodoFim){ const [pIni,pFim]=defaultPeriodo(); s.config.periodoInicio=s.config.periodoInicio||pIni; s.config.periodoFim=s.config.periodoFim||pFim; }
   s.registros=s.registros||{};
   return s;
 }
@@ -607,12 +621,40 @@ function weekBounds(iso_){ const dt=D(iso_); const mon=addDays(dt,-mondayIndex(d
 function diasUteisRange(aISO,bISO){ let c=0; let dt=D(aISO); const end=D(bISO); while(dt<=end){ if(isDiaUtil(dt)) c++; dt=addDays(dt,1); } return c; }
 function refDate(){ const el=document.getElementById('ref-data'); return (el&&el.value) || isoStr(new Date()); }
 function initRef(){ const el=document.getElementById('ref-data'); if(el && !el.value) el.value=isoStr(new Date()); }
+/* período padrão (usado só até o admin definir um em Parâmetros): mês corrente */
+function defaultPeriodo(){
+  const d=new Date();
+  const first=new Date(d.getFullYear(), d.getMonth(), 1);
+  const last=new Date(d.getFullYear(), d.getMonth()+1, 0);
+  return [isoStr(first), isoStr(last)];
+}
 
-/* meta mensal configurada: por região específica, ou soma de todas (regiaoFiltro==null) */
-function metaMes(regiaoFiltro){
+/* meta total configurada para o Período da Meta (Parâmetros): por região específica, ou soma de todas (regiaoFiltro==null) */
+function metaTotalPeriodo(regiaoFiltro){
   const cfg=state.config;
   if(regiaoFiltro==null) return cfg.regioes.reduce((sum,r)=>sum+n(cfg.metas[r]),0);
   return n(cfg.metas[regiaoFiltro]);
+}
+function periodoValido(){
+  const cfg=state.config;
+  return !!(cfg.periodoInicio && cfg.periodoFim && cfg.periodoInicio<=cfg.periodoFim);
+}
+function diasUteisPeriodo(){
+  if(!periodoValido()) return 0;
+  return diasUteisRange(state.config.periodoInicio, state.config.periodoFim);
+}
+/* meta por dia útil = meta total do período ÷ dias úteis do período */
+function metaDiaria(regiaoFiltro){
+  const du=diasUteisPeriodo();
+  return du>0 ? metaTotalPeriodo(regiaoFiltro)/du : 0;
+}
+/* recorta [aISO,bISO] pelo Período da Meta configurado; retorna null se não houver interseção */
+function clipAoPeriodo(aISO, bISO){
+  const cfg=state.config;
+  if(!periodoValido()) return null;
+  const a = aISO<cfg.periodoInicio ? cfg.periodoInicio : aISO;
+  const b = bISO>cfg.periodoFim ? cfg.periodoFim : bISO;
+  return a<=b ? [a,b] : null;
 }
 /* soma o valor das OS Faturadas cuja Data do Faturamento cai no intervalo [aISO,bISO] */
 function somaFaturadoPeriodo(aISO, bISO, regiaoFiltro){
@@ -627,28 +669,48 @@ function somaFaturadoPeriodo(aISO, bISO, regiaoFiltro){
   });
   return s;
 }
-/* meta da semana = meta do mês pro-rateada pelos dias úteis da semana dentro do mês */
+/* meta do mês = meta diária × dias úteis do mês, recortado pelo Período da Meta */
+function metaMesCalc(regiaoFiltro, refISO){
+  const [mA0,mB0]=monthBounds(refISO);
+  const clip=clipAoPeriodo(mA0,mB0);
+  if(!clip) return {meta:0, real:0, mA:mA0, mB:mB0, foraDoPeriodo:true};
+  const [mA,mB]=clip;
+  const dias=diasUteisRange(mA,mB);
+  const meta=metaDiaria(regiaoFiltro)*dias;
+  const real=somaFaturadoPeriodo(mA,mB,regiaoFiltro);
+  return {meta, real, mA, mB, foraDoPeriodo:false};
+}
+/* meta da semana = meta diária × dias úteis da semana, recortado pelo mês (já recortado pelo período) */
 function metaSemanaCalc(regiaoFiltro, refISO){
-  const [mA,mB]=monthBounds(refISO);
-  const diasMes=diasUteisRange(mA,mB);
+  const {mA, mB, foraDoPeriodo}=metaMesCalc(regiaoFiltro, refISO);
   const [wA0,wB0]=weekBounds(refISO);
+  if(foraDoPeriodo) return {metaSemanaVal:0, real:0, wA:wA0, wB:wB0, foraDoPeriodo:true};
   const wA = wA0<mA ? mA : wA0, wB = wB0>mB ? mB : wB0;
-  const diasSemana = wA<=wB ? diasUteisRange(wA,wB) : 0;
-  const metaMesVal = metaMes(regiaoFiltro);
-  const metaSemanaVal = diasMes>0 ? metaMesVal*diasSemana/diasMes : 0;
-  return {metaSemanaVal, wA, wB};
+  if(wA>wB) return {metaSemanaVal:0, real:0, wA:wA0, wB:wB0, foraDoPeriodo:true};
+  const diasSemana=diasUteisRange(wA,wB);
+  const metaSemanaVal=metaDiaria(regiaoFiltro)*diasSemana;
+  const real=somaFaturadoPeriodo(wA,wB,regiaoFiltro);
+  return {metaSemanaVal, real, wA, wB, foraDoPeriodo:false};
 }
 function metaMesStripHtml(regiaoFiltro, refISO){
-  const [mA,mB]=monthBounds(refISO);
-  const meta=metaMes(regiaoFiltro), real=somaFaturadoPeriodo(mA,mB,regiaoFiltro), falta=Math.max(meta-real,0), p=meta>0?real/meta:null;
+  const {meta, real, foraDoPeriodo}=metaMesCalc(regiaoFiltro, refISO);
+  if(foraDoPeriodo){
+    return tbox('Meta do Mês (R$)', brl0(0), mesLabel(refISO)+' — fora do Período da Meta') +
+      tbox('Realizado no Mês (R$)', brl(0)) + tbox('% Atingido', pct(null)) + tbox('Falta para a Meta (R$)', brl0(0), null, {accent:true});
+  }
+  const falta=Math.max(meta-real,0), p=meta>0?real/meta:null;
   return tbox('Meta do Mês (R$)', brl0(meta), mesLabel(refISO)) +
     tbox('Realizado no Mês (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
     tbox('% Atingido', pct(p)) +
     tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
 }
 function metaSemanaStripHtml(regiaoFiltro, refISO){
-  const {metaSemanaVal, wA, wB}=metaSemanaCalc(regiaoFiltro, refISO);
-  const real=somaFaturadoPeriodo(wA,wB,regiaoFiltro), falta=Math.max(metaSemanaVal-real,0), p=metaSemanaVal>0?real/metaSemanaVal:null;
+  const {metaSemanaVal, real, wA, wB, foraDoPeriodo}=metaSemanaCalc(regiaoFiltro, refISO);
+  if(foraDoPeriodo){
+    return tbox('Meta da Semana (R$)', brl0(0), `${ddmm(D(wA))} a ${ddmm(D(wB))} — fora do Período da Meta`) +
+      tbox('Realizado na Semana (R$)', brl(0)) + tbox('% Atingido', pct(null)) + tbox('Falta para a Meta (R$)', brl0(0), null, {accent:true});
+  }
+  const falta=Math.max(metaSemanaVal-real,0), p=metaSemanaVal>0?real/metaSemanaVal:null;
   return tbox('Meta da Semana (R$)', brl0(metaSemanaVal), `${ddmm(D(wA))} a ${ddmm(D(wB))}`) +
     tbox('Realizado na Semana (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
     tbox('% Atingido', pct(p)) +
@@ -671,10 +733,11 @@ function renderPainel(){
   document.querySelector('#tbl-geral-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
   document.querySelector('#tbl-geral-regiao tbody').innerHTML = tableRows(s.porRegiao, cfg.regioes, brl);
 
-  const [mA,mB]=monthBounds(ref);
   document.querySelector('#tbl-geral-metaregiao tbody').innerHTML = cfg.regioes.map(r=>{
-    const meta=metaMes(r); const real=somaFaturadoPeriodo(mA,mB,r); const p=meta>0?real/meta:null;
+    const {meta, real, foraDoPeriodo}=metaMesCalc(r, ref);
+    const p=meta>0?real/meta:null;
     const pw=Math.max(0,Math.min(100,(p||0)*100));
+    if(foraDoPeriodo) return `<tr><td><span class="reg ${regClass(r)}">${escapeHtml(r)}</span></td><td colspan="3" style="color:var(--texto-suave)">Fora do Período da Meta configurado.</td></tr>`;
     return `<tr><td><span class="reg ${regClass(r)}">${escapeHtml(r)}</span></td>
       <td class="num">${brl0(meta)}</td><td class="num">${brl(real)}</td>
       <td><div class="bar" style="min-width:90px;"><span style="width:${pw}%"></span></div> ${pct(p)}</td></tr>`;
@@ -837,6 +900,10 @@ document.getElementById('inp-import-json').addEventListener('change', e=>{
 function _renderParametros0(){
   const cfg=state.config;
 
+  document.getElementById('p-periodo-inicio').value = cfg.periodoInicio||'';
+  document.getElementById('p-periodo-fim').value = cfg.periodoFim||'';
+  atualizarDiasUteisPeriodo();
+
   document.querySelector('#tbl-p-regioes tbody').innerHTML = cfg.regioes.map((r,i)=>
     `<tr><td><span class="reg ${regClass(r)}">${escapeHtml(r)}</span></td>
       <td class="num"><input type="number" step="1000" min="0" data-meta-regiao="${escapeHtml(r)}" value="${n(cfg.metas[r])}"></td>
@@ -869,6 +936,20 @@ function renderListaSimples(sel, arr, chave){
     `<tr><td>${escapeHtml(v)}</td><td><button class="btn danger small" data-rem="${chave}:${i}" type="button">remover</button></td></tr>`).join('')
     || `<tr><td colspan="2" style="color:var(--texto-suave)">Nenhum item cadastrado.</td></tr>`;
 }
+function atualizarDiasUteisPeriodo(){
+  const el=document.getElementById('p-periodo-diasuteis'), aviso=document.getElementById('p-periodo-aviso');
+  if(!el) return;
+  if(periodoValido()){ el.value=diasUteisPeriodo()+' dia(s) útil(eis)'; if(aviso) aviso.style.display='none'; }
+  else{ el.value='—'; if(aviso) aviso.style.display='block'; }
+}
+function onPeriodoChange(){
+  state.config.periodoInicio=document.getElementById('p-periodo-inicio').value;
+  state.config.periodoFim=document.getElementById('p-periodo-fim').value;
+  dirtyConfig.add('periodo'); save();
+  atualizarDiasUteisPeriodo(); renderAll(); toast('Período da meta atualizado.');
+}
+document.getElementById('p-periodo-inicio').addEventListener('change', onPeriodoChange);
+document.getElementById('p-periodo-fim').addEventListener('change', onPeriodoChange);
 document.getElementById('pane-parametros').addEventListener('click', e=>{
   const b=e.target.closest('[data-rem]'); if(!b) return;
   const [chave, idxStr]=b.dataset.rem.split(':'); const idx=+idxStr;
@@ -1072,7 +1153,7 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
 /* ---------- concorrência (ETag + mesclagem por registro/seção) ---------- */
 let cloudEtag=null, acessoEtag=null;
 const dirtyReg=new Set();       // ids de registros alterados (ou excluídos) localmente
-const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, bases, formasPagamento, metas, situacoes, chaveBaixaInterna
+const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
 let salvando=false, pendente=false;
 
 function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status'); if(!el) return; el.textContent=txt; el.className='sync-status '+(cls||''); el.style.display=txt?'block':'none'; }
@@ -1083,6 +1164,7 @@ function aplicarLocalSobre(base){
   ['regioes','statusOS','tiposOS','tecnicos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
+  if(dirtyConfig.has('periodo')){ res.config.periodoInicio=state.config.periodoInicio; res.config.periodoFim=state.config.periodoFim; }
   return res;
 }
 function renderRemoto(){
