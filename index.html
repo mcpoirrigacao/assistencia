@@ -164,6 +164,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .overlay .box h2{font-family:var(--fonte-titulo);color:var(--azul-escuro);margin:0 0 10px;}
   .overlay .box p{color:var(--texto-suave);font-size:.9rem;margin:0 0 22px;}
   .overlay .emoji{font-size:3rem;margin-bottom:16px;}
+  .overlay.modal{background:rgba(3,89,15,.6);z-index:900;padding:16px;}
+  .overlay.modal .box{max-width:700px;width:100%;text-align:left;padding:22px 24px;max-height:88vh;overflow-y:auto;}
+  .overlay.modal .box h2{font-family:var(--fonte-corpo);font-size:1.1rem;}
+  .cel-cliente{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
   .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--azul-escuro);color:#fff;padding:10px 18px;border-radius:20px;font-size:.82rem;opacity:0;transition:opacity .25s, transform .25s;pointer-events:none;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.3);}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -295,7 +299,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   <!-- ============== LANÇAMENTOS ============== -->
   <section class="pane" id="pane-lancamentos">
     <h2 class="pane-title">Lançamentos de OS</h2>
-    <p class="pane-desc">Uma linha por OS. Região, Status, Tipo e Técnico têm menu suspenso (ligado à aba Parâmetros). "Situação de Faturamento" é calculada automaticamente a partir de NFS-e, Data do Faturamento e Forma de Pagamento.</p>
+    <p class="pane-desc">Use os filtros para localizar uma OS já lançada e clique em "editar" para atualizá-la. "Situação de Faturamento" é calculada automaticamente a partir de NFS-e, Data do Faturamento e Forma de Pagamento.</p>
 
     <div class="hint-row">
       <button class="btn primary small" id="btn-add-os" type="button">+ Nova OS</button>
@@ -307,12 +311,25 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     </div>
 
     <div class="card">
+      <h3>Filtros <span class="h3-side" id="f-resumo"></span></h3>
+      <div class="grid">
+        <div class="field"><label>Buscar (cliente, nº OS, base, observação)</label><input type="text" id="f-busca" placeholder="Digite para buscar..."></div>
+        <div class="field"><label>Região</label><select id="f-regiao"></select></div>
+        <div class="field"><label>Status</label><select id="f-status"></select></div>
+        <div class="field"><label>Situação</label><select id="f-situacao"></select></div>
+        <div class="field"><label>Técnico</label><select id="f-tecnico"></select></div>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn ghost small" id="btn-limpar-filtros" type="button">Limpar filtros</button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="tablewrap">
         <table class="dt" id="tbl-registros">
           <thead><tr>
-            <th>Região</th><th>Status</th><th>Tipo</th><th>Nº OS</th><th>Data Abertura</th><th>Cliente</th><th>Base</th><th>Técnico</th>
-            <th class="r">Horas</th><th class="r">Valor (R$)</th><th>NFS-e</th><th>Data Fat.</th><th>Forma Pgto</th>
-            <th>Situação</th><th>Observação</th><th></th>
+            <th>Região</th><th>Status</th><th>Nº OS</th><th>Cliente</th><th>Técnico</th>
+            <th class="r">Valor (R$)</th><th>Situação</th><th></th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -446,6 +463,40 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   </section>
 
 </main>
+
+<!-- ============== MODAL — CRIAR/EDITAR OS ============== -->
+<div class="overlay modal" id="modal-os">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:1.15rem;" id="modal-titulo">Editar OS</h2>
+      <button class="btn ghost small" id="btn-fechar-modal" type="button">✕ Fechar</button>
+    </div>
+    <div class="grid">
+      <div class="field"><label>Região</label><select id="m-regiao"></select></div>
+      <div class="field"><label>Status</label><select id="m-status"></select></div>
+      <div class="field"><label>Tipo</label><select id="m-tipo"></select></div>
+      <div class="field"><label>Nº da OS</label><input type="text" id="m-numeroOS"></div>
+      <div class="field"><label>Data Abertura</label><input type="date" id="m-dataAbertura"></div>
+      <div class="field"><label>Cliente</label><input type="text" id="m-cliente"></div>
+      <div class="field"><label>Base</label><select id="m-base"></select></div>
+      <div class="field"><label>Técnico</label><select id="m-tecnico"></select></div>
+      <div class="field"><label>Quant. de Horas</label><input type="number" step="0.01" min="0" id="m-horas"></div>
+      <div class="field"><label>Valor da OS (R$)</label><input type="number" step="0.01" min="0" id="m-valor"></div>
+      <div class="field"><label>NFS-e</label><input type="text" id="m-nfse"></div>
+      <div class="field"><label>Data do Faturamento</label><input type="date" id="m-dataFaturamento"></div>
+      <div class="field"><label>Forma de Pagamento</label><select id="m-formaPagamento"></select></div>
+      <div class="field readonly"><label>Situação (calculada)</label><input type="text" id="m-situacao" disabled></div>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Observação</label>
+      <textarea id="m-observacao" rows="2"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+      <button class="btn primary" id="btn-salvar-os" type="button">Salvar</button>
+      <button class="btn danger" id="btn-excluir-os" type="button">Excluir OS</button>
+    </div>
+  </div>
+</div>
 
 <div class="overlay" id="overlay-login">
   <div class="box">
@@ -792,84 +843,165 @@ function ordenarRegistros(){
     return String(ra.numeroOS||'').localeCompare(String(rb.numeroOS||''), 'pt-BR', {numeric:true});
   });
 }
-function linhaRegistro(id, r){
+/* ---------- filtros (para localizar OS já lançadas) ---------- */
+function fval(id){ const el=document.getElementById(id); return el ? el.value : ''; }
+function filtroAtual(){
+  return {
+    busca: fval('f-busca').trim().toLowerCase(),
+    regiao: fval('f-regiao'), status: fval('f-status'),
+    situacao: fval('f-situacao'), tecnico: fval('f-tecnico')
+  };
+}
+function fillFilterSelect(id, list, allLabel){
+  const sel=document.getElementById(id); if(!sel) return;
+  const atual=sel.value;
+  sel.innerHTML = `<option value="">${allLabel}</option>` + list.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if(list.includes(atual)) sel.value=atual;
+}
+function renderFiltrosSelects(){
   const cfg=state.config;
+  fillFilterSelect('f-regiao', cfg.regioes, 'Todas as regiões');
+  fillFilterSelect('f-status', cfg.statusOS, 'Todos os status');
+  fillFilterSelect('f-situacao', [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], 'Todas as situações');
+  fillFilterSelect('f-tecnico', cfg.tecnicos, 'Todos os técnicos');
+}
+function aplicarFiltros(entries){
+  const f=filtroAtual();
+  return entries.filter(([,r])=>{
+    if(f.regiao && r.regiao!==f.regiao) return false;
+    if(f.status && r.status!==f.status) return false;
+    if(f.tecnico && r.tecnico!==f.tecnico) return false;
+    if(f.situacao && computeSituacao(r)!==f.situacao) return false;
+    if(f.busca){
+      const alvo=[r.cliente,r.numeroOS,r.base,r.observacao].map(x=>String(x||'').toLowerCase()).join(' | ');
+      if(!alvo.includes(f.busca)) return false;
+    }
+    return true;
+  });
+}
+['f-busca','f-regiao','f-status','f-situacao','f-tecnico'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener('input', renderRegistros); el.addEventListener('change', renderRegistros);
+});
+document.getElementById('btn-limpar-filtros').addEventListener('click', ()=>{
+  ['f-busca','f-regiao','f-status','f-situacao','f-tecnico'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  renderRegistros();
+});
+
+/* ---------- tabela compacta (só o essencial; edição via modal) ---------- */
+function linhaCompacta(id, r){
   const sit=computeSituacao(r);
   return `<tr data-id="${id}">
-    <td><select data-f="regiao">${buildOptions(cfg.regioes, r.regiao)}</select></td>
-    <td><select data-f="status">${buildOptions(cfg.statusOS, r.status)}</select></td>
-    <td><select data-f="tipo">${buildOptions(cfg.tiposOS, r.tipo)}</select></td>
-    <td><input type="text" data-f="numeroOS" value="${escapeHtml(r.numeroOS||'')}" style="min-width:60px;"></td>
-    <td><input type="date" data-f="dataAbertura" value="${escapeHtml(r.dataAbertura||'')}"></td>
-    <td><input type="text" data-f="cliente" value="${escapeHtml(r.cliente||'')}" style="min-width:160px;"></td>
-    <td><select data-f="base">${buildOptions(cfg.bases, r.base)}</select></td>
-    <td><select data-f="tecnico">${buildOptions(cfg.tecnicos, r.tecnico)}</select></td>
-    <td><input type="number" step="0.01" min="0" data-f="horas" value="${n(r.horas)}"></td>
-    <td><input type="number" step="0.01" min="0" data-f="valor" value="${n(r.valor)}"></td>
-    <td><input type="text" data-f="nfse" value="${escapeHtml(r.nfse||'')}" style="min-width:100px;"></td>
-    <td><input type="date" data-f="dataFaturamento" value="${escapeHtml(r.dataFaturamento||'')}"></td>
-    <td><select data-f="formaPagamento">${buildOptions(cfg.formasPagamento, r.formaPagamento)}</select></td>
-    <td class="col-sit"><span class="sit ${sitClass(sit)}">${escapeHtml(sit)}</span></td>
-    <td><input type="text" data-f="observacao" value="${escapeHtml(r.observacao||'')}" style="min-width:160px;"></td>
-    <td><button class="btn danger small" data-rem-os="1" type="button">excluir</button></td>
+    <td><span class="reg ${regClass(r.regiao)}">${escapeHtml(r.regiao||'—')}</span></td>
+    <td>${escapeHtml(r.status||'—')}</td>
+    <td>${escapeHtml(r.numeroOS||'—')}</td>
+    <td class="cel-cliente" title="${escapeHtml(r.cliente||'')}">${escapeHtml(r.cliente||'(sem cliente)')}</td>
+    <td>${escapeHtml(r.tecnico||'—')}</td>
+    <td class="num">${brl(n(r.valor))}</td>
+    <td><span class="sit ${sitClass(sit)}">${escapeHtml(sit)}</span></td>
+    <td><button class="btn ghost small" data-edit-os="${id}" type="button">editar</button></td>
   </tr>`;
 }
 function renderRegistros(){
-  const entries=ordenarRegistros();
+  renderFiltrosSelects();
+  const todos=ordenarRegistros();
+  const filtrados=aplicarFiltros(todos);
   const tb=document.querySelector('#tbl-registros tbody');
-  let horasT=0, valorT=0;
-  entries.forEach(([,r])=>{ horasT+=n(r.horas); valorT+=n(r.valor); });
-  tb.innerHTML = entries.map(([id,r])=>linhaRegistro(id,r)).join('')
-    + `<tr class="total-row"><td colspan="8">TOTAL (${int(entries.length)} OS)</td>
-        <td class="num">${horasFmt(horasT)}</td><td class="num">${brl(valorT)}</td><td colspan="6"></td></tr>`;
+  tb.innerHTML = filtrados.map(([id,r])=>linhaCompacta(id,r)).join('')
+    || `<tr><td colspan="8" style="text-align:center;color:var(--texto-suave);padding:18px;">Nenhuma OS encontrada com os filtros atuais.</td></tr>`;
+  tb.querySelectorAll('[data-edit-os]').forEach(b=>b.addEventListener('click', ()=>abrirEdicaoOS(b.dataset.editOs)));
 
-  tb.querySelectorAll('tr[data-id]').forEach(tr=>{
-    const id=tr.dataset.id;
-    tr.querySelectorAll('[data-f]').forEach(el=>{
-      el.addEventListener('input', ()=>onEditRegistro(id, el));
-      el.addEventListener('change', ()=>onEditRegistro(id, el));
-    });
-    const rem=tr.querySelector('[data-rem-os]');
-    if(rem) rem.addEventListener('click', ()=>{
-      if(!confirm('Excluir esta OS? Essa ação não pode ser desfeita.')) return;
-      delete state.registros[id];
-      dirtyReg.add(id); save(); renderRegistros(); toast('OS excluída.');
-    });
-  });
+  let horasF=0, valorF=0;
+  filtrados.forEach(([,r])=>{ horasF+=n(r.horas); valorF+=n(r.valor); });
+  const resumo=document.getElementById('f-resumo');
+  if(resumo) resumo.textContent = `${int(filtrados.length)} de ${int(todos.length)} OS · ${horasFmt(horasF)} h · ${brl(valorF)}`;
 }
-function onEditRegistro(id, el){
-  const campo=el.dataset.f;
-  const reg=state.registros[id]; if(!reg) return;
-  reg[campo] = (el.type==='number') ? n(el.value) : el.value;
-  dirtyReg.add(id); save();
-  // Atualiza só o pill de Situação da linha (preserva foco de quem está digitando)
-  if(campo==='nfse'||campo==='dataFaturamento'||campo==='formaPagamento'){
-    const tr=el.closest('tr'); const cell=tr.querySelector('.col-sit');
-    if(cell){ const sit=computeSituacao(reg); cell.innerHTML=`<span class="sit ${sitClass(sit)}">${escapeHtml(sit)}</span>`; }
-  }
-  // Atualiza a linha de total sem redesenhar a grade inteira
-  if(campo==='horas'||campo==='valor'){
-    const trTotal=document.querySelector('#tbl-registros tbody tr.total-row');
-    if(trTotal){
-      let horasT=0, valorT=0;
-      Object.values(state.registros).forEach(r=>{ horasT+=n(r.horas); valorT+=n(r.valor); });
-      trTotal.children[1].textContent=horasFmt(horasT);
-      trTotal.children[2].textContent=brl(valorT);
-    }
-  }
+
+/* ---------- modal de criação/edição de OS ---------- */
+let editandoId=null;
+function preencherSelectModal(id, list, atual){ document.getElementById(id).innerHTML=buildOptions(list, atual); }
+function lerFormModal(){
+  return {
+    regiao: document.getElementById('m-regiao').value,
+    status: document.getElementById('m-status').value,
+    tipo: document.getElementById('m-tipo').value,
+    numeroOS: document.getElementById('m-numeroOS').value.trim(),
+    dataAbertura: document.getElementById('m-dataAbertura').value,
+    cliente: document.getElementById('m-cliente').value.trim(),
+    base: document.getElementById('m-base').value,
+    tecnico: document.getElementById('m-tecnico').value,
+    horas: n(document.getElementById('m-horas').value),
+    valor: n(document.getElementById('m-valor').value),
+    nfse: document.getElementById('m-nfse').value.trim(),
+    dataFaturamento: document.getElementById('m-dataFaturamento').value,
+    formaPagamento: document.getElementById('m-formaPagamento').value,
+    observacao: document.getElementById('m-observacao').value.trim()
+  };
 }
-document.getElementById('btn-add-os').addEventListener('click', ()=>{
+function atualizarSituacaoModal(){ document.getElementById('m-situacao').value = computeSituacao(lerFormModal()); }
+function preencherModal(r){
   const cfg=state.config;
-  const id=uid();
-  state.registros[id]={
+  preencherSelectModal('m-regiao', cfg.regioes, r.regiao);
+  preencherSelectModal('m-status', cfg.statusOS, r.status);
+  preencherSelectModal('m-tipo', cfg.tiposOS, r.tipo);
+  document.getElementById('m-numeroOS').value = r.numeroOS||'';
+  document.getElementById('m-dataAbertura').value = r.dataAbertura||'';
+  document.getElementById('m-cliente').value = r.cliente||'';
+  preencherSelectModal('m-base', cfg.bases, r.base);
+  preencherSelectModal('m-tecnico', cfg.tecnicos, r.tecnico);
+  document.getElementById('m-horas').value = n(r.horas);
+  document.getElementById('m-valor').value = n(r.valor);
+  document.getElementById('m-nfse').value = r.nfse||'';
+  document.getElementById('m-dataFaturamento').value = r.dataFaturamento||'';
+  preencherSelectModal('m-formaPagamento', cfg.formasPagamento, r.formaPagamento);
+  document.getElementById('m-observacao').value = r.observacao||'';
+  atualizarSituacaoModal();
+}
+function abrirEdicaoOS(id){
+  const r=state.registros[id]; if(!r) return;
+  editandoId=id;
+  document.getElementById('modal-titulo').textContent = `Editar OS Nº ${r.numeroOS||'(sem número)'}${r.cliente?' — '+r.cliente:''}`;
+  preencherModal(r);
+  document.getElementById('btn-excluir-os').style.display='';
+  document.getElementById('modal-os').style.display='flex';
+}
+function abrirNovaOS(){
+  const cfg=state.config;
+  editandoId=null;
+  document.getElementById('modal-titulo').textContent='Nova OS';
+  preencherModal({
     regiao:cfg.regioes[0]||'', status:cfg.statusOS[0]||'', tipo:cfg.tiposOS[0]||'',
     numeroOS:'', dataAbertura:isoStr(new Date()), cliente:'', base:cfg.bases[0]||'', tecnico:cfg.tecnicos[0]||'',
     horas:0, valor:0, nfse:'', dataFaturamento:'', formaPagamento:cfg.formasPagamento[0]||'', observacao:''
-  };
-  dirtyReg.add(id); save(); renderRegistros(); toast('OS adicionada — preencha os dados na tabela.');
-  const tr=document.querySelector(`#tbl-registros tbody tr[data-id="${id}"]`);
-  if(tr){ const first=tr.querySelector('input[data-f="cliente"]'); if(first) first.focus(); tr.scrollIntoView({block:'nearest'}); }
+  });
+  document.getElementById('btn-excluir-os').style.display='none';
+  document.getElementById('modal-os').style.display='flex';
+  setTimeout(()=>document.getElementById('m-cliente').focus(), 50);
+}
+function fecharModalOS(){ document.getElementById('modal-os').style.display='none'; editandoId=null; }
+['m-nfse','m-dataFaturamento','m-formaPagamento'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('input', atualizarSituacaoModal); el.addEventListener('change', atualizarSituacaoModal);
 });
+document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalOS);
+document.getElementById('modal-os').addEventListener('click', e=>{ if(e.target.id==='modal-os') fecharModalOS(); });
+document.getElementById('btn-salvar-os').addEventListener('click', ()=>{
+  const dados=lerFormModal();
+  if(!dados.cliente){ toast('Informe o cliente.'); return; }
+  const id=editandoId||uid();
+  const criando=!editandoId;
+  state.registros[id]=dados;
+  dirtyReg.add(id); save();
+  fecharModalOS(); renderRegistros();
+  toast(criando?'OS adicionada.':'OS atualizada.');
+});
+document.getElementById('btn-excluir-os').addEventListener('click', ()=>{
+  if(!editandoId) return;
+  if(!confirm('Excluir esta OS? Essa ação não pode ser desfeita.')) return;
+  delete state.registros[editandoId]; dirtyReg.add(editandoId); save();
+  fecharModalOS(); renderRegistros(); toast('OS excluída.');
+});
+document.getElementById('btn-add-os').addEventListener('click', abrirNovaOS);
 
 /* Export / Import */
 function download(name, content, type){
