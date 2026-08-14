@@ -182,6 +182,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <span class="brand-mark">MAQCAMPO Assistência Técnica</span>
     <span class="brand-sub">Faturamento de Serviços — Regional I e Regional II</span>
     <div style="margin-left:auto;display:flex;gap:14px;align-items:flex-start;">
+      <div class="ref-box" style="margin-left:0;">
+        <label for="ref-data">Data de referência (meta)</label>
+        <input type="date" id="ref-data">
+      </div>
       <div style="text-align:right;">
         <button id="btn-ms-login" class="ms-btn" type="button"><span id="ms-login-label">⏳ Inicializando...</span></button>
         <div id="ms-user-info" class="ms-info"></div>
@@ -191,8 +195,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   </div>
   <nav class="tabs" id="tabs">
     <button data-tab="painel" class="active">Painel Geral</button>
-    <button data-tab="regional1">Regional I</button>
-    <button data-tab="regional2">Regional II</button>
+    <button data-tab="regional">Regional</button>
     <button data-tab="lancamentos">Lançamentos</button>
     <button data-tab="parametros">⚙ Parâmetros</button>
   </nav>
@@ -203,12 +206,15 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   <!-- ============== PAINEL GERAL ============== -->
   <section class="pane active" id="pane-painel">
     <h2 class="pane-title">Painel Geral</h2>
-    <p class="pane-desc">Consolida Regional I e Regional II. Para ver uma regional isolada, use as abas ao lado.</p>
+    <p class="pane-desc">Consolida todas as regiões. Para analisar uma região isoladamente, use a aba Regional. Os cartões de meta abaixo seguem a "Data de referência" no topo da página.</p>
 
     <div class="totals-strip" id="strip-geral-kpi"></div>
 
-    <div class="block-title">Acompanhamento de Metas (todas as regiões)</div>
-    <div class="totals-strip" id="strip-geral-meta"></div>
+    <div class="block-title">Meta do Mês — todas as regiões</div>
+    <div class="totals-strip" id="strip-geral-meta-mes"></div>
+
+    <div class="block-title">Meta da Semana — todas as regiões</div>
+    <div class="totals-strip" id="strip-geral-meta-semana"></div>
 
     <div class="card">
       <h3>Status da OS</h3>
@@ -235,80 +241,52 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       </table></div>
     </div>
     <div class="card">
-      <h3>Meta × Realizado por Região</h3>
+      <h3>Meta do Mês × Realizado por Região</h3>
       <div class="tablewrap"><table class="dt" id="tbl-geral-metaregiao">
-        <thead><tr><th>Região</th><th class="r">Meta (R$)</th><th class="r">Realizado (R$)</th><th>% Atingido</th></tr></thead><tbody></tbody>
+        <thead><tr><th>Região</th><th class="r">Meta do Mês (R$)</th><th class="r">Realizado no Mês (R$)</th><th>% Atingido</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
   </section>
 
-  <!-- ============== REGIONAL I ============== -->
-  <section class="pane" id="pane-regional1">
-    <h2 class="pane-title" id="r1-title">Regional I</h2>
-    <p class="pane-desc">Somente lançamentos desta região (definida em Parâmetros).</p>
+  <!-- ============== REGIONAL (região selecionável) ============== -->
+  <section class="pane" id="pane-regional">
+    <h2 class="pane-title">Regional</h2>
+    <p class="pane-desc" id="regional-desc">Escolha a região para ver os indicadores individualmente. Regiões cadastradas em Parâmetros aparecem aqui automaticamente.</p>
 
-    <div class="totals-strip" id="strip-r1-kpi"></div>
+    <div class="field" style="max-width:280px;margin-bottom:16px;">
+      <label for="sel-regional">Região</label>
+      <select id="sel-regional"></select>
+    </div>
 
-    <div class="block-title">Acompanhamento de Metas (mês atual)</div>
-    <div class="totals-strip" id="strip-r1-meta"></div>
+    <div class="totals-strip" id="strip-reg-kpi"></div>
+
+    <div class="block-title">Meta do Mês</div>
+    <div class="totals-strip" id="strip-reg-meta-mes"></div>
+
+    <div class="block-title">Meta da Semana</div>
+    <div class="totals-strip" id="strip-reg-meta-semana"></div>
 
     <div class="card">
       <h3>Status da OS</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r1-status">
+      <div class="tablewrap"><table class="dt" id="tbl-reg-status">
         <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
       <h3>Tipo de OS</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r1-tipo">
+      <div class="tablewrap"><table class="dt" id="tbl-reg-tipo">
         <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
       <h3>Situação de Faturamento</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r1-situacao">
+      <div class="tablewrap"><table class="dt" id="tbl-reg-situacao">
         <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
       <h3>Técnico(s) — Horas</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r1-tecnico">
-        <thead><tr><th>Técnico</th><th class="r">Horas</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-  </section>
-
-  <!-- ============== REGIONAL II ============== -->
-  <section class="pane" id="pane-regional2">
-    <h2 class="pane-title" id="r2-title">Regional II</h2>
-    <p class="pane-desc">Somente lançamentos desta região (definida em Parâmetros).</p>
-
-    <div class="totals-strip" id="strip-r2-kpi"></div>
-
-    <div class="block-title">Acompanhamento de Metas (mês atual)</div>
-    <div class="totals-strip" id="strip-r2-meta"></div>
-
-    <div class="card">
-      <h3>Status da OS</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r2-status">
-        <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Tipo de OS</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r2-tipo">
-        <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Situação de Faturamento</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r2-situacao">
-        <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Técnico(s) — Horas</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-r2-tecnico">
+      <div class="tablewrap"><table class="dt" id="tbl-reg-tecnico">
         <thead><tr><th>Técnico</th><th class="r">Horas</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
@@ -396,6 +374,29 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     </div>
 
     <div class="card">
+      <h3>Bases</h3>
+      <div class="tablewrap" style="margin-bottom:10px;">
+        <table class="dt" id="tbl-p-bases"><thead><tr><th>Base</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Nova base</label><input type="text" id="p-base-nome" placeholder="ex: PALMAS - 01"></div>
+        <button class="btn primary small" id="btn-add-base" type="button">+ Base</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Forma de Pagamento</h3>
+      <div class="tablewrap" style="margin-bottom:10px;">
+        <table class="dt" id="tbl-p-formapgto"><thead><tr><th>Forma de Pagamento</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Nova forma de pagamento</label><input type="text" id="p-formapgto-nome" placeholder="ex: BOLETO"></div>
+        <button class="btn primary small" id="btn-add-formapgto" type="button">+ Forma de Pagamento</button>
+      </div>
+      <div class="note">O item usado como "baixa interna" (configurado abaixo) deve existir também nesta lista, para poder ser selecionado nos lançamentos.</div>
+    </div>
+
+    <div class="card">
       <h3>Situação de Faturamento — cálculo automático</h3>
       <div class="grid" style="max-width:780px;">
         <div class="field"><label>Rótulo "Faturado"</label><input type="text" id="p-sit-fat"></div>
@@ -470,6 +471,8 @@ function defaultState(){
       statusOS:['Em Andamento','Fechada','Pausada'],
       tiposOS:['Interna','Cliente','Garantia'],
       tecnicos:['ALTEMIR JOÃO','LEONARDO FRANCO'],
+      bases:['PALMAS - 01','CRISTALINA - 07','PARACATU - 08','FORMOSA - 10','NOVA CRIXÁS - 12'],
+      formasPagamento:['IRRICONTROL - BOLETO','BAUER - BOLETO','CLIENTE','BAIXA INTERNA'],
       metas:{'Regional I':500000,'Regional II':500000},
       situacoes:{faturado:'Faturado', pendente:'Pendente', naoAplica:'Não se aplica'},
       chaveBaixaInterna:'BAIXA INTERNA'
@@ -481,8 +484,20 @@ function defaultState(){
 const STORE_KEY = 'maqcampo-assistencia-tecnica-v1';
 let state = load();
 
+function withDefaults(s){
+  const d=defaultState();
+  s.config=Object.assign({}, d.config, s.config);
+  ['regioes','statusOS','tiposOS','tecnicos','bases','formasPagamento'].forEach(k=>{
+    if(!Array.isArray(s.config[k])||!s.config[k].length) s.config[k]=d.config[k];
+  });
+  s.config.metas=Object.assign({}, d.config.metas, s.config.metas||{});
+  s.config.situacoes=Object.assign({}, d.config.situacoes, s.config.situacoes||{});
+  if(!s.config.chaveBaixaInterna) s.config.chaveBaixaInterna=d.config.chaveBaixaInterna;
+  s.registros=s.registros||{};
+  return s;
+}
 function load(){
-  try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.config&&s.registros) return s; } }catch(e){}
+  try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.config&&s.registros) return withDefaults(s); } }catch(e){}
   return defaultState();
 }
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} if(typeof scheduleCloudSave==='function') scheduleCloudSave(); }
@@ -570,16 +585,74 @@ function kpiStripHtml(s){
     tbox('Valor Faturado (R$)', brl(s.valorFaturado), null, {barPct: s.valorTotal>0?s.valorFaturado/s.valorTotal*100:0}) +
     tbox('Valor Pendente (R$)', brl(s.valorPendente), null, {accent:true});
 }
-function metaStripHtml(meta, realizado){
-  const falta=Math.max(meta-realizado,0), p=meta>0?realizado/meta:null;
-  return tbox('Meta de Faturamento (R$)', brl0(meta)) +
-    tbox('Realizado — Faturado (R$)', brl(realizado), null, {barPct:p!=null?p*100:0}) +
-    tbox('% Atingido da Meta', pct(p)) +
-    tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
-}
 function tableRows(obj, orderList, fmt){
   return orderList.map(k=>`<tr><td>${escapeHtml(k)}</td><td class="num">${fmt(obj[k]||0)}</td></tr>`).join('')
     || `<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
+}
+
+/* =========================================================================
+   DATAS — filtro de meta por mês e por semana (baseado na Data de referência
+   do cabeçalho e na Data do Faturamento de cada OS)
+   ========================================================================= */
+const MESES_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function D(iso_){ const [y,m,d]=iso_.split('-').map(Number); return new Date(y, m-1, d); }
+function isoStr(dt){ const y=dt.getFullYear(), m=String(dt.getMonth()+1).padStart(2,'0'), d=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+function addDays(dt,k){ return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()+k); }
+function mondayIndex(dt){ return (dt.getDay()+6)%7; } // 0=Seg ... 6=Dom
+function isDiaUtil(dt){ return mondayIndex(dt)<5; }   // Seg–Sex
+function ddmm(dt){ return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0'); }
+function mesLabel(iso_){ const dt=D(iso_); return `${MESES_PT[dt.getMonth()]}/${dt.getFullYear()}`; }
+function monthBounds(iso_){ const dt=D(iso_); const first=new Date(dt.getFullYear(),dt.getMonth(),1); const last=new Date(dt.getFullYear(),dt.getMonth()+1,0); return [isoStr(first), isoStr(last)]; }
+function weekBounds(iso_){ const dt=D(iso_); const mon=addDays(dt,-mondayIndex(dt)); const sun=addDays(mon,6); return [isoStr(mon), isoStr(sun)]; }
+function diasUteisRange(aISO,bISO){ let c=0; let dt=D(aISO); const end=D(bISO); while(dt<=end){ if(isDiaUtil(dt)) c++; dt=addDays(dt,1); } return c; }
+function refDate(){ const el=document.getElementById('ref-data'); return (el&&el.value) || isoStr(new Date()); }
+function initRef(){ const el=document.getElementById('ref-data'); if(el && !el.value) el.value=isoStr(new Date()); }
+
+/* meta mensal configurada: por região específica, ou soma de todas (regiaoFiltro==null) */
+function metaMes(regiaoFiltro){
+  const cfg=state.config;
+  if(regiaoFiltro==null) return cfg.regioes.reduce((sum,r)=>sum+n(cfg.metas[r]),0);
+  return n(cfg.metas[regiaoFiltro]);
+}
+/* soma o valor das OS Faturadas cuja Data do Faturamento cai no intervalo [aISO,bISO] */
+function somaFaturadoPeriodo(aISO, bISO, regiaoFiltro){
+  const cfg=state.config;
+  let s=0;
+  Object.values(state.registros).forEach(r=>{
+    if(regiaoFiltro!=null && r.regiao!==regiaoFiltro) return;
+    if(computeSituacao(r)!==cfg.situacoes.faturado) return;
+    const d=(r.dataFaturamento||'').trim(); if(!d) return;
+    if(d<aISO || d>bISO) return;
+    s+=n(r.valor);
+  });
+  return s;
+}
+/* meta da semana = meta do mês pro-rateada pelos dias úteis da semana dentro do mês */
+function metaSemanaCalc(regiaoFiltro, refISO){
+  const [mA,mB]=monthBounds(refISO);
+  const diasMes=diasUteisRange(mA,mB);
+  const [wA0,wB0]=weekBounds(refISO);
+  const wA = wA0<mA ? mA : wA0, wB = wB0>mB ? mB : wB0;
+  const diasSemana = wA<=wB ? diasUteisRange(wA,wB) : 0;
+  const metaMesVal = metaMes(regiaoFiltro);
+  const metaSemanaVal = diasMes>0 ? metaMesVal*diasSemana/diasMes : 0;
+  return {metaSemanaVal, wA, wB};
+}
+function metaMesStripHtml(regiaoFiltro, refISO){
+  const [mA,mB]=monthBounds(refISO);
+  const meta=metaMes(regiaoFiltro), real=somaFaturadoPeriodo(mA,mB,regiaoFiltro), falta=Math.max(meta-real,0), p=meta>0?real/meta:null;
+  return tbox('Meta do Mês (R$)', brl0(meta), mesLabel(refISO)) +
+    tbox('Realizado no Mês (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
+    tbox('% Atingido', pct(p)) +
+    tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
+}
+function metaSemanaStripHtml(regiaoFiltro, refISO){
+  const {metaSemanaVal, wA, wB}=metaSemanaCalc(regiaoFiltro, refISO);
+  const real=somaFaturadoPeriodo(wA,wB,regiaoFiltro), falta=Math.max(metaSemanaVal-real,0), p=metaSemanaVal>0?real/metaSemanaVal:null;
+  return tbox('Meta da Semana (R$)', brl0(metaSemanaVal), `${ddmm(D(wA))} a ${ddmm(D(wB))}`) +
+    tbox('Realizado na Semana (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
+    tbox('% Atingido', pct(p)) +
+    tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
 }
 
 /* =========================================================================
@@ -587,55 +660,63 @@ function tableRows(obj, orderList, fmt){
    ========================================================================= */
 function renderPainel(){
   const cfg=state.config;
+  const ref=refDate();
   const s=statsFor(null);
   document.getElementById('strip-geral-kpi').innerHTML = kpiStripHtml(s);
-
-  const metaTotal = cfg.regioes.reduce((sum,r)=>sum+n(cfg.metas[r]),0);
-  document.getElementById('strip-geral-meta').innerHTML = metaStripHtml(metaTotal, s.valorFaturado);
+  document.getElementById('strip-geral-meta-mes').innerHTML = metaMesStripHtml(null, ref);
+  document.getElementById('strip-geral-meta-semana').innerHTML = metaSemanaStripHtml(null, ref);
 
   document.querySelector('#tbl-geral-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-geral-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
   document.querySelector('#tbl-geral-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
   document.querySelector('#tbl-geral-regiao tbody').innerHTML = tableRows(s.porRegiao, cfg.regioes, brl);
 
+  const [mA,mB]=monthBounds(ref);
   document.querySelector('#tbl-geral-metaregiao tbody').innerHTML = cfg.regioes.map(r=>{
-    const sr=statsFor(x=>x.regiao===r);
-    const meta=n(cfg.metas[r]); const p=meta>0?sr.valorFaturado/meta:null;
+    const meta=metaMes(r); const real=somaFaturadoPeriodo(mA,mB,r); const p=meta>0?real/meta:null;
     const pw=Math.max(0,Math.min(100,(p||0)*100));
     return `<tr><td><span class="reg ${regClass(r)}">${escapeHtml(r)}</span></td>
-      <td class="num">${brl0(meta)}</td><td class="num">${brl(sr.valorFaturado)}</td>
+      <td class="num">${brl0(meta)}</td><td class="num">${brl(real)}</td>
       <td><div class="bar" style="min-width:90px;"><span style="width:${pw}%"></span></div> ${pct(p)}</td></tr>`;
   }).join('') || `<tr><td colspan="4" style="color:var(--texto-suave)">Nenhuma região cadastrada.</td></tr>`;
 }
 
 /* =========================================================================
-   RENDER — REGIONAL (genérico, usado por Regional I e Regional II)
+   RENDER — REGIONAL (uma única aba; a região ativa é escolhida no seletor,
+   e cresce automaticamente com as regiões cadastradas em Parâmetros)
    ========================================================================= */
-function renderRegional(nomeRegiao, ids){
+let regionalAtivo=null;
+function renderSelectRegional(){
   const cfg=state.config;
-  const s=statsFor(r=>r.regiao===nomeRegiao);
-  document.getElementById(ids.title).textContent = nomeRegiao || '(região não definida)';
-  document.getElementById(ids.kpi).innerHTML = kpiStripHtml(s);
-
-  const meta=n(cfg.metas[nomeRegiao]);
-  document.getElementById(ids.meta).innerHTML = metaStripHtml(meta, s.valorFaturado);
-
-  document.querySelector('#'+ids.status+' tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
-  document.querySelector('#'+ids.tipo+' tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
-  document.querySelector('#'+ids.situacao+' tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
-  document.querySelector('#'+ids.tecnico+' tbody').innerHTML = tableRows(s.porTecnico, cfg.tecnicos, horasFmt);
+  if(!regionalAtivo || !cfg.regioes.includes(regionalAtivo)) regionalAtivo=cfg.regioes[0]||null;
+  const sel=document.getElementById('sel-regional');
+  sel.innerHTML = cfg.regioes.length
+    ? cfg.regioes.map(r=>`<option value="${escapeHtml(r)}" ${r===regionalAtivo?'selected':''}>${escapeHtml(r)}</option>`).join('')
+    : `<option value="">Nenhuma região cadastrada</option>`;
 }
-function renderRegional1(){
-  renderRegional(state.config.regioes[0]||'Regional I', {
-    title:'r1-title', kpi:'strip-r1-kpi', meta:'strip-r1-meta',
-    status:'tbl-r1-status', tipo:'tbl-r1-tipo', situacao:'tbl-r1-situacao', tecnico:'tbl-r1-tecnico'
-  });
-}
-function renderRegional2(){
-  renderRegional(state.config.regioes[1]||'Regional II', {
-    title:'r2-title', kpi:'strip-r2-kpi', meta:'strip-r2-meta',
-    status:'tbl-r2-status', tipo:'tbl-r2-tipo', situacao:'tbl-r2-situacao', tecnico:'tbl-r2-tecnico'
-  });
+document.getElementById('sel-regional').addEventListener('change', e=>{ regionalAtivo=e.target.value||null; renderRegionalAtivo(); });
+
+function renderRegionalAtivo(){
+  renderSelectRegional();
+  const cfg=state.config, nome=regionalAtivo, ref=refDate();
+  document.getElementById('regional-desc').textContent = nome
+    ? `Somente lançamentos da região "${nome}". Os cartões de meta seguem a "Data de referência" no topo da página.`
+    : 'Nenhuma região cadastrada — adicione uma na aba Parâmetros.';
+  if(!nome){
+    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana'].forEach(id=>document.getElementById(id).innerHTML='');
+    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico'].forEach(id=>{
+      document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
+    });
+    return;
+  }
+  const s=statsFor(r=>r.regiao===nome);
+  document.getElementById('strip-reg-kpi').innerHTML = kpiStripHtml(s);
+  document.getElementById('strip-reg-meta-mes').innerHTML = metaMesStripHtml(nome, ref);
+  document.getElementById('strip-reg-meta-semana').innerHTML = metaSemanaStripHtml(nome, ref);
+  document.querySelector('#tbl-reg-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
+  document.querySelector('#tbl-reg-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
+  document.querySelector('#tbl-reg-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
+  document.querySelector('#tbl-reg-tecnico tbody').innerHTML = tableRows(s.porTecnico, cfg.tecnicos, horasFmt);
 }
 
 /* =========================================================================
@@ -657,13 +738,13 @@ function linhaRegistro(id, r){
     <td><select data-f="tipo">${buildOptions(cfg.tiposOS, r.tipo)}</select></td>
     <td><input type="text" data-f="numeroOS" value="${escapeHtml(r.numeroOS||'')}" style="min-width:60px;"></td>
     <td><input type="text" data-f="cliente" value="${escapeHtml(r.cliente||'')}" style="min-width:160px;"></td>
-    <td><input type="text" data-f="base" value="${escapeHtml(r.base||'')}" style="min-width:120px;"></td>
+    <td><select data-f="base">${buildOptions(cfg.bases, r.base)}</select></td>
     <td><select data-f="tecnico">${buildOptions(cfg.tecnicos, r.tecnico)}</select></td>
     <td><input type="number" step="0.01" min="0" data-f="horas" value="${n(r.horas)}"></td>
     <td><input type="number" step="0.01" min="0" data-f="valor" value="${n(r.valor)}"></td>
     <td><input type="text" data-f="nfse" value="${escapeHtml(r.nfse||'')}" style="min-width:100px;"></td>
     <td><input type="date" data-f="dataFaturamento" value="${escapeHtml(r.dataFaturamento||'')}"></td>
-    <td><input type="text" data-f="formaPagamento" value="${escapeHtml(r.formaPagamento||'')}" style="min-width:140px;"></td>
+    <td><select data-f="formaPagamento">${buildOptions(cfg.formasPagamento, r.formaPagamento)}</select></td>
     <td class="col-sit"><span class="sit ${sitClass(sit)}">${escapeHtml(sit)}</span></td>
     <td><input type="text" data-f="observacao" value="${escapeHtml(r.observacao||'')}" style="min-width:160px;"></td>
     <td><button class="btn danger small" data-rem-os="1" type="button">excluir</button></td>
@@ -718,8 +799,8 @@ document.getElementById('btn-add-os').addEventListener('click', ()=>{
   const id=uid();
   state.registros[id]={
     regiao:cfg.regioes[0]||'', status:cfg.statusOS[0]||'', tipo:cfg.tiposOS[0]||'',
-    numeroOS:'', cliente:'', base:'', tecnico:cfg.tecnicos[0]||'',
-    horas:0, valor:0, nfse:'', dataFaturamento:'', formaPagamento:'', observacao:''
+    numeroOS:'', cliente:'', base:cfg.bases[0]||'', tecnico:cfg.tecnicos[0]||'',
+    horas:0, valor:0, nfse:'', dataFaturamento:'', formaPagamento:cfg.formasPagamento[0]||'', observacao:''
   };
   dirtyReg.add(id); save(); renderRegistros(); toast('OS adicionada — preencha os dados na tabela.');
   const tr=document.querySelector(`#tbl-registros tbody tr[data-id="${id}"]`);
@@ -745,7 +826,7 @@ document.getElementById('btn-export-json').addEventListener('click', ()=>{ downl
 document.getElementById('inp-import-json').addEventListener('change', e=>{
   const file=e.target.files[0]; if(!file) return;
   const rd=new FileReader();
-  rd.onload=()=>{ try{ const s=JSON.parse(rd.result); if(!s.config||!s.registros) throw 0; state=s; save(); renderAll(); toast('Dados importados.'); }
+  rd.onload=()=>{ try{ const s=JSON.parse(rd.result); if(!s.config||!s.registros) throw 0; state=withDefaults(s); save(); renderAll(); toast('Dados importados.'); }
     catch(err){ toast('Arquivo inválido.'); } };
   rd.readAsText(file); e.target.value='';
 });
@@ -773,6 +854,8 @@ function _renderParametros0(){
   renderListaSimples('#tbl-p-status', cfg.statusOS, 'statusOS');
   renderListaSimples('#tbl-p-tipo', cfg.tiposOS, 'tiposOS');
   renderListaSimples('#tbl-p-tecnicos', cfg.tecnicos, 'tecnicos');
+  renderListaSimples('#tbl-p-bases', cfg.bases, 'bases');
+  renderListaSimples('#tbl-p-formapgto', cfg.formasPagamento, 'formasPagamento');
 
   document.getElementById('p-sit-fat').value = cfg.situacoes.faturado;
   document.getElementById('p-sit-pen').value = cfg.situacoes.pendente;
@@ -814,6 +897,8 @@ function ligarAddSimples(btnId, inpId, chave, upper){
 ligarAddSimples('btn-add-status','p-status-nome','statusOS',false);
 ligarAddSimples('btn-add-tipo','p-tipo-nome','tiposOS',false);
 ligarAddSimples('btn-add-tecnico','p-tecnico-nome','tecnicos',true);
+ligarAddSimples('btn-add-base','p-base-nome','bases',true);
+ligarAddSimples('btn-add-formapgto','p-formapgto-nome','formasPagamento',true);
 
 document.getElementById('btn-salvar-params').addEventListener('click', ()=>{
   const cfg=state.config;
@@ -836,18 +921,18 @@ function renderParametros(){ _renderParametros0(); renderUsuarios(); }
    ABAS
    ========================================================================= */
 function renderAll(){
-  renderPainel(); renderRegional1(); renderRegional2();
+  renderPainel(); renderRegionalAtivo();
   if(document.getElementById('pane-lancamentos').classList.contains('active')) renderRegistros();
   if(document.getElementById('pane-parametros').classList.contains('active')) renderParametros();
 }
+document.getElementById('ref-data').addEventListener('change', ()=>{ renderPainel(); renderRegionalAtivo(); });
 document.getElementById('tabs').addEventListener('click', e=>{
   const btn=e.target.closest('button[data-tab]'); if(!btn) return;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
   document.querySelectorAll('section.pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('pane-'+btn.dataset.tab).classList.add('active');
   if(btn.dataset.tab==='painel') renderPainel();
-  if(btn.dataset.tab==='regional1') renderRegional1();
-  if(btn.dataset.tab==='regional2') renderRegional2();
+  if(btn.dataset.tab==='regional') renderRegionalAtivo();
   if(btn.dataset.tab==='lancamentos') renderRegistros();
   if(btn.dataset.tab==='parametros') renderParametros();
 });
@@ -987,7 +1072,7 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
 /* ---------- concorrência (ETag + mesclagem por registro/seção) ---------- */
 let cloudEtag=null, acessoEtag=null;
 const dirtyReg=new Set();       // ids de registros alterados (ou excluídos) localmente
-const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, metas, situacoes, chaveBaixaInterna
+const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, bases, formasPagamento, metas, situacoes, chaveBaixaInterna
 let salvando=false, pendente=false;
 
 function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status'); if(!el) return; el.textContent=txt; el.className='sync-status '+(cls||''); el.style.display=txt?'block':'none'; }
@@ -995,13 +1080,13 @@ function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status')
 function aplicarLocalSobre(base){
   const res={ config: clone(base.config||state.config), registros: clone(base.registros||{}) };
   dirtyReg.forEach(id=>{ if(state.registros[id]) res.registros[id]=clone(state.registros[id]); else delete res.registros[id]; });
-  ['regioes','statusOS','tiposOS','tecnicos','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
+  ['regioes','statusOS','tiposOS','tecnicos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
   return res;
 }
 function renderRemoto(){
-  renderPainel(); renderRegional1(); renderRegional2();
+  renderPainel(); renderRegionalAtivo();
   if(document.getElementById('pane-lancamentos').classList.contains('active')) renderRegistros();
   if(document.getElementById('pane-parametros').classList.contains('active')) renderParametros();
 }
@@ -1014,7 +1099,7 @@ async function sincronizarNuvem(silencioso){
   }
   const dd=await graphGetJsonEtag(spPath(DADOS_FILE));
   if(dd.ok && dd.data && dd.data.config && dd.data.registros){
-    state = (dirtyReg.size||dirtyConfig.size) ? aplicarLocalSobre(dd.data) : dd.data;
+    state = withDefaults((dirtyReg.size||dirtyConfig.size) ? aplicarLocalSobre(dd.data) : dd.data);
     cloudEtag=dd.etag; try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
   } else if(dd.ok && dd.missing){
     cloudEtag=null;
@@ -1048,7 +1133,7 @@ async function salvarDados(){
       setSyncStatus('⟳ mesclando…','saving');
       const dd=await graphGetJsonEtag(spPath(DADOS_FILE));
       if(dd.ok && dd.data && dd.data.config && dd.data.registros){
-        state=aplicarLocalSobre(dd.data); cloudEtag=dd.etag;
+        state=withDefaults(aplicarLocalSobre(dd.data)); cloudEtag=dd.etag;
         try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
         renderRemoto();
       } else break;
@@ -1068,7 +1153,7 @@ async function puxarSeMudou(){
   if(a && (a.tagName==='INPUT'||a.tagName==='SELECT')) return;
   const dd=await graphGetJsonEtag(spPath(DADOS_FILE));
   if(dd.ok && dd.etag && dd.etag!==cloudEtag && dd.data && dd.data.config && dd.data.registros){
-    state=dd.data; cloudEtag=dd.etag; try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+    state=withDefaults(dd.data); cloudEtag=dd.etag; try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
     renderRemoto(); setSyncStatus('⟳ atualizado agora','ok');
   }
 }
@@ -1160,6 +1245,7 @@ document.getElementById('btn-add-comum').addEventListener('click', async ()=>{
 });
 document.getElementById('btn-sync').addEventListener('click', ()=>{ if(!msAccount){ toast('Entre com o Microsoft primeiro.'); return; } sincronizarNuvem(false); });
 
+initRef();
 renderAll();
 initAuth();
 </script>
