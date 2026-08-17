@@ -168,6 +168,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .overlay.modal .box{max-width:700px;width:100%;text-align:left;padding:22px 24px;max-height:88vh;overflow-y:auto;}
   .overlay.modal .box h2{font-family:var(--fonte-corpo);font-size:1.1rem;}
   .cel-cliente{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chk-list{border:1px solid var(--borda);border-radius:4px;background:#fffdf9;padding:7px 9px;max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;}
+  .chk-list label{display:flex;align-items:center;gap:7px;font-size:.86rem;font-weight:400;color:var(--texto);cursor:pointer;}
+  .chk-list input[type=checkbox]{margin:0;width:15px;height:15px;flex:0 0 auto;}
+  .chk-list .vazio{color:var(--texto-suave);font-size:.8rem;}
 
   .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--azul-escuro);color:#fff;padding:10px 18px;border-radius:20px;font-size:.82rem;opacity:0;transition:opacity .25s, transform .25s;pointer-events:none;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.3);}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -303,6 +307,47 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
+    <div class="card">
+      <h3>Departamento <span class="h3-side">na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-departamento">
+        <thead><tr><th>Departamento</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="block-title">Faturamento da Semana <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— mesma semana acima, por Data do Faturamento da OS</span></div>
+    <div class="note">Considera as OS cuja "Data do Faturamento" (aba Lançamentos) cai na semana acima. Diferente do bloco "Resultados da Semana" (que usa a Data de Abertura), aqui só entram OS que já tiveram o faturamento lançado — é a mesma base de cálculo do "Realizado" nos cartões de Meta do Mês/Semana.</div>
+    <div class="totals-strip" id="strip-reg-fatsemana-kpi"></div>
+
+    <div class="card">
+      <h3>Status da OS <span class="h3-side">faturamento na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-status">
+        <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Tipo de OS <span class="h3-side">faturamento na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-tipo">
+        <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Situação de Faturamento <span class="h3-side">faturamento na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-situacao">
+        <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Base <span class="h3-side">faturamento na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-base">
+        <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Departamento <span class="h3-side">faturamento na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-departamento">
+        <thead><tr><th>Departamento</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
 
     <div class="block-title">Acumulado (todo o período lançado)</div>
     <div class="card">
@@ -352,6 +397,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <div class="field"><label>Região</label><select id="f-regiao"></select></div>
         <div class="field"><label>Status</label><select id="f-status"></select></div>
         <div class="field"><label>Situação</label><select id="f-situacao"></select></div>
+        <div class="field"><label>Departamento</label><select id="f-departamento"></select></div>
         <div class="field"><label>Técnico</label><select id="f-tecnico"></select></div>
       </div>
       <div style="margin-top:10px;">
@@ -363,7 +409,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div class="tablewrap">
         <table class="dt" id="tbl-registros">
           <thead><tr>
-            <th>Região</th><th>Status</th><th>Nº OS</th><th>Cliente</th><th>Técnico</th>
+            <th>Região</th><th>Status</th><th>Nº OS</th><th>Cliente</th><th>Departamento</th><th>Técnico(s)</th>
             <th class="r">Valor (R$)</th><th>Situação</th><th></th>
           </tr></thead>
           <tbody></tbody>
@@ -433,6 +479,17 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Novo técnico</label><input type="text" id="p-tecnico-nome" placeholder="ex: JOÃO PEREIRA"></div>
         <button class="btn primary small" id="btn-add-tecnico" type="button">+ Técnico</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Departamento</h3>
+      <div class="tablewrap" style="margin-bottom:10px;">
+        <table class="dt" id="tbl-p-departamentos"><thead><tr><th>Departamento</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Novo departamento</label><input type="text" id="p-departamento-nome" placeholder="ex: Pós-Venda"></div>
+        <button class="btn primary small" id="btn-add-departamento" type="button">+ Departamento</button>
       </div>
     </div>
 
@@ -513,8 +570,9 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div class="field"><label>Nº da OS</label><input type="text" id="m-numeroOS"></div>
       <div class="field"><label>Data Abertura</label><input type="date" id="m-dataAbertura"></div>
       <div class="field"><label>Cliente</label><input type="text" id="m-cliente"></div>
+      <div class="field"><label>Departamento</label><select id="m-departamento"></select></div>
       <div class="field"><label>Base</label><select id="m-base"></select></div>
-      <div class="field"><label>Técnico</label><select id="m-tecnico"></select></div>
+      <div class="field"><label>Técnico(s)</label><div class="chk-list" id="m-tecnicos"></div></div>
       <div class="field"><label>Quant. de Horas</label><input type="number" step="0.01" min="0" id="m-horas"></div>
       <div class="field"><label>Valor da OS (R$)</label><input type="number" step="0.01" min="0" id="m-valor"></div>
       <div class="field"><label>NFS-e</label><input type="text" id="m-nfse"></div>
@@ -569,6 +627,7 @@ function defaultState(){
       statusOS:['Em Andamento','Fechada','Pausada'],
       tiposOS:['Interna','Cliente','Garantia'],
       tecnicos:['ALTEMIR JOÃO','LEONARDO FRANCO'],
+      departamentos:[],
       bases:['PALMAS - 01','CRISTALINA - 07','PARACATU - 08','FORMOSA - 10','NOVA CRIXÁS - 12'],
       formasPagamento:['IRRICONTROL - BOLETO','BAUER - BOLETO','CLIENTE','BAIXA INTERNA'],
       metas:{'Regional I':500000,'Regional II':500000},
@@ -576,7 +635,7 @@ function defaultState(){
       situacoes:{faturado:'Faturado', pendente:'Pendente', naoAplica:'Não se aplica'},
       chaveBaixaInterna:'BAIXA INTERNA'
     },
-    registros:{} // "id": {regiao,status,tipo,numeroOS,dataAbertura,cliente,base,tecnico,horas,valor,nfse,dataFaturamento,formaPagamento,observacao}
+    registros:{} // "id": {regiao,status,tipo,numeroOS,dataAbertura,cliente,departamento,base,tecnicos:[...],horas,valor,nfse,dataFaturamento,formaPagamento,observacao}
   };
 }
 
@@ -589,11 +648,16 @@ function withDefaults(s){
   ['regioes','statusOS','tiposOS','tecnicos','bases','formasPagamento'].forEach(k=>{
     if(!Array.isArray(s.config[k])||!s.config[k].length) s.config[k]=d.config[k];
   });
+  if(!Array.isArray(s.config.departamentos)) s.config.departamentos=d.config.departamentos; // lista pode ficar vazia (sem itens padrão)
   s.config.metas=Object.assign({}, d.config.metas, s.config.metas||{});
   s.config.situacoes=Object.assign({}, d.config.situacoes, s.config.situacoes||{});
   if(!s.config.chaveBaixaInterna) s.config.chaveBaixaInterna=d.config.chaveBaixaInterna;
   if(!s.config.periodoInicio||!s.config.periodoFim){ const [pIni,pFim]=defaultPeriodo(); s.config.periodoInicio=s.config.periodoInicio||pIni; s.config.periodoFim=s.config.periodoFim||pFim; }
   s.registros=s.registros||{};
+  Object.values(s.registros).forEach(r=>{ // retrocompat: técnico único (string) → técnicos (lista)
+    if(!Array.isArray(r.tecnicos)) r.tecnicos = r.tecnico ? [r.tecnico] : [];
+    if('tecnico' in r) delete r.tecnico;
+  });
   return s;
 }
 function load(){
@@ -646,13 +710,14 @@ function statsFor(filterFn){
   const cfg=state.config;
   const s={
     totalOS:0, horas:0, valorTotal:0, valorFaturado:0, valorPendente:0, valorNaoAplica:0,
-    porStatus:{}, porTipo:{}, porSituacao:{}, porRegiao:{}, porTecnico:{}, porBase:{}
+    porStatus:{}, porTipo:{}, porSituacao:{}, porRegiao:{}, porTecnico:{}, porBase:{}, porDepartamento:{}
   };
   cfg.statusOS.forEach(x=>s.porStatus[x]=0);
   cfg.tiposOS.forEach(x=>s.porTipo[x]=0);
   cfg.regioes.forEach(x=>s.porRegiao[x]=0);
   cfg.tecnicos.forEach(x=>s.porTecnico[x]=0);
   cfg.bases.forEach(x=>s.porBase[x]={qtd:0, horas:0, valor:0});
+  cfg.departamentos.forEach(x=>s.porDepartamento[x]={qtd:0, horas:0, valor:0});
   [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica].forEach(x=>s.porSituacao[x]=0);
 
   Object.values(state.registros).forEach(r=>{
@@ -666,9 +731,15 @@ function statsFor(filterFn){
     s.porTipo[r.tipo]=(s.porTipo[r.tipo]||0)+n(r.valor);
     s.porSituacao[sit]=(s.porSituacao[sit]||0)+n(r.valor);
     s.porRegiao[r.regiao]=(s.porRegiao[r.regiao]||0)+n(r.valor);
-    s.porTecnico[r.tecnico]=(s.porTecnico[r.tecnico]||0)+n(r.horas);
+    (r.tecnicos||[]).forEach(t=>{ // OS com vários técnicos: horas totais contam para cada um
+      s.porTecnico[t]=(s.porTecnico[t]||0)+n(r.horas);
+    });
     if(!s.porBase[r.base]) s.porBase[r.base]={qtd:0, horas:0, valor:0}; // base fora da lista atual (retrocompat)
     s.porBase[r.base].qtd++; s.porBase[r.base].horas+=n(r.horas); s.porBase[r.base].valor+=n(r.valor);
+    if(r.departamento){
+      if(!s.porDepartamento[r.departamento]) s.porDepartamento[r.departamento]={qtd:0, horas:0, valor:0}; // fora da lista atual (retrocompat)
+      s.porDepartamento[r.departamento].qtd++; s.porDepartamento[r.departamento].horas+=n(r.horas); s.porDepartamento[r.departamento].valor+=n(r.valor);
+    }
   });
   return s;
 }
@@ -863,12 +934,14 @@ function renderRegionalAtivo(){
     ? `Somente lançamentos da região "${nome}". Os cartões de meta e o filtro semanal seguem a "Data de referência" no topo da página.`
     : 'Nenhuma região cadastrada — adicione uma na aba Parâmetros.';
   if(!nome){
-    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana','strip-reg-semana-kpi'].forEach(id=>document.getElementById(id).innerHTML='');
+    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana','strip-reg-semana-kpi','strip-reg-fatsemana-kpi'].forEach(id=>document.getElementById(id).innerHTML='');
     document.getElementById('reg-semana-range').textContent='';
-    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-semana-status','tbl-reg-semana-tipo','tbl-reg-semana-situacao'].forEach(id=>{
+    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-semana-status','tbl-reg-semana-tipo','tbl-reg-semana-situacao','tbl-reg-fatsemana-status','tbl-reg-fatsemana-tipo','tbl-reg-fatsemana-situacao'].forEach(id=>{
       document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
     });
-    document.querySelector('#tbl-reg-semana-base tbody').innerHTML=`<tr><td colspan="4" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
+    ['tbl-reg-semana-base','tbl-reg-semana-departamento','tbl-reg-fatsemana-base','tbl-reg-fatsemana-departamento'].forEach(id=>{
+      document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="4" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
+    });
     return;
   }
   const s=statsFor(r=>r.regiao===nome);
@@ -893,6 +966,20 @@ function renderRegionalAtivo(){
   document.querySelector('#tbl-reg-semana-tipo tbody').innerHTML = tableRows(sSemana.porTipo, cfg.tiposOS, brl);
   document.querySelector('#tbl-reg-semana-situacao tbody').innerHTML = tableRows(sSemana.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
   document.querySelector('#tbl-reg-semana-base tbody').innerHTML = tableRowsBase(sSemana.porBase, cfg.bases);
+  document.querySelector('#tbl-reg-semana-departamento tbody').innerHTML = tableRowsBase(sSemana.porDepartamento, cfg.departamentos);
+
+  /* faturamento da semana — mesma semana [wA,wB], agora por Data do Faturamento (mesma base do "Realizado" da Meta) */
+  const sFatSemana=statsFor(r=>r.regiao===nome && (r.dataFaturamento||'')>=wA && (r.dataFaturamento||'')<=wB);
+  document.getElementById('strip-reg-fatsemana-kpi').innerHTML =
+    tbox('OS c/ Faturamento na Semana', int(sFatSemana.totalOS)) +
+    tbox('Valor Faturado na Semana (R$)', brl(sFatSemana.valorFaturado), null, {accent:true}) +
+    tbox('Horas Faturadas na Semana', horasFmt(sFatSemana.horas)) +
+    tbox('Valor Total Lançado na Semana (R$)', brl(sFatSemana.valorTotal));
+  document.querySelector('#tbl-reg-fatsemana-status tbody').innerHTML = tableRows(sFatSemana.porStatus, cfg.statusOS, int);
+  document.querySelector('#tbl-reg-fatsemana-tipo tbody').innerHTML = tableRows(sFatSemana.porTipo, cfg.tiposOS, brl);
+  document.querySelector('#tbl-reg-fatsemana-situacao tbody').innerHTML = tableRows(sFatSemana.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
+  document.querySelector('#tbl-reg-fatsemana-base tbody').innerHTML = tableRowsBase(sFatSemana.porBase, cfg.bases);
+  document.querySelector('#tbl-reg-fatsemana-departamento tbody').innerHTML = tableRowsBase(sFatSemana.porDepartamento, cfg.departamentos);
 }
 function moverSemanaRegional(dias){
   const el=document.getElementById('ref-data');
@@ -919,7 +1006,8 @@ function filtroAtual(){
   return {
     busca: fval('f-busca').trim().toLowerCase(),
     regiao: fval('f-regiao'), status: fval('f-status'),
-    situacao: fval('f-situacao'), tecnico: fval('f-tecnico')
+    situacao: fval('f-situacao'), tecnico: fval('f-tecnico'),
+    departamento: fval('f-departamento')
   };
 }
 function fillFilterSelect(id, list, allLabel){
@@ -934,13 +1022,15 @@ function renderFiltrosSelects(){
   fillFilterSelect('f-status', cfg.statusOS, 'Todos os status');
   fillFilterSelect('f-situacao', [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], 'Todas as situações');
   fillFilterSelect('f-tecnico', cfg.tecnicos, 'Todos os técnicos');
+  fillFilterSelect('f-departamento', cfg.departamentos, 'Todos os departamentos');
 }
 function aplicarFiltros(entries){
   const f=filtroAtual();
   return entries.filter(([,r])=>{
     if(f.regiao && r.regiao!==f.regiao) return false;
     if(f.status && r.status!==f.status) return false;
-    if(f.tecnico && r.tecnico!==f.tecnico) return false;
+    if(f.tecnico && !(r.tecnicos||[]).includes(f.tecnico)) return false;
+    if(f.departamento && r.departamento!==f.departamento) return false;
     if(f.situacao && computeSituacao(r)!==f.situacao) return false;
     if(f.busca){
       const alvo=[r.cliente,r.numeroOS,r.base,r.observacao].map(x=>String(x||'').toLowerCase()).join(' | ');
@@ -949,12 +1039,12 @@ function aplicarFiltros(entries){
     return true;
   });
 }
-['f-busca','f-regiao','f-status','f-situacao','f-tecnico'].forEach(id=>{
+['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('input', renderRegistros); el.addEventListener('change', renderRegistros);
 });
 document.getElementById('btn-limpar-filtros').addEventListener('click', ()=>{
-  ['f-busca','f-regiao','f-status','f-situacao','f-tecnico'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   renderRegistros();
 });
 
@@ -966,7 +1056,8 @@ function linhaCompacta(id, r){
     <td>${escapeHtml(r.status||'—')}</td>
     <td>${escapeHtml(r.numeroOS||'—')}</td>
     <td class="cel-cliente" title="${escapeHtml(r.cliente||'')}">${escapeHtml(r.cliente||'(sem cliente)')}</td>
-    <td>${escapeHtml(r.tecnico||'—')}</td>
+    <td>${escapeHtml(r.departamento||'—')}</td>
+    <td>${escapeHtml((r.tecnicos&&r.tecnicos.length)?r.tecnicos.join(', '):'—')}</td>
     <td class="num">${brl(n(r.valor))}</td>
     <td><span class="sit ${sitClass(sit)}">${escapeHtml(sit)}</span></td>
     <td><button class="btn ghost small" data-edit-os="${id}" type="button">editar</button></td>
@@ -978,7 +1069,7 @@ function renderRegistros(){
   const filtrados=aplicarFiltros(todos);
   const tb=document.querySelector('#tbl-registros tbody');
   tb.innerHTML = filtrados.map(([id,r])=>linhaCompacta(id,r)).join('')
-    || `<tr><td colspan="8" style="text-align:center;color:var(--texto-suave);padding:18px;">Nenhuma OS encontrada com os filtros atuais.</td></tr>`;
+    || `<tr><td colspan="9" style="text-align:center;color:var(--texto-suave);padding:18px;">Nenhuma OS encontrada com os filtros atuais.</td></tr>`;
   tb.querySelectorAll('[data-edit-os]').forEach(b=>b.addEventListener('click', ()=>abrirEdicaoOS(b.dataset.editOs)));
 
   let horasF=0, valorF=0;
@@ -990,6 +1081,16 @@ function renderRegistros(){
 /* ---------- modal de criação/edição de OS ---------- */
 let editandoId=null;
 function preencherSelectModal(id, list, atual){ document.getElementById(id).innerHTML=buildOptions(list, atual); }
+function preencherTecnicosModal(list, selecionados){
+  const el=document.getElementById('m-tecnicos');
+  const sel=selecionados||[];
+  el.innerHTML = list.length
+    ? list.map(t=>`<label><input type="checkbox" value="${escapeHtml(t)}" ${sel.includes(t)?'checked':''}> ${escapeHtml(t)}</label>`).join('')
+    : `<span class="vazio">Nenhum técnico cadastrado — adicione em Parâmetros.</span>`;
+}
+function lerTecnicosModal(){
+  return Array.from(document.querySelectorAll('#m-tecnicos input[type=checkbox]:checked')).map(c=>c.value);
+}
 function lerFormModal(){
   return {
     regiao: document.getElementById('m-regiao').value,
@@ -998,8 +1099,9 @@ function lerFormModal(){
     numeroOS: document.getElementById('m-numeroOS').value.trim(),
     dataAbertura: document.getElementById('m-dataAbertura').value,
     cliente: document.getElementById('m-cliente').value.trim(),
+    departamento: document.getElementById('m-departamento').value,
     base: document.getElementById('m-base').value,
-    tecnico: document.getElementById('m-tecnico').value,
+    tecnicos: lerTecnicosModal(),
     horas: n(document.getElementById('m-horas').value),
     valor: n(document.getElementById('m-valor').value),
     nfse: document.getElementById('m-nfse').value.trim(),
@@ -1017,8 +1119,9 @@ function preencherModal(r){
   document.getElementById('m-numeroOS').value = r.numeroOS||'';
   document.getElementById('m-dataAbertura').value = r.dataAbertura||'';
   document.getElementById('m-cliente').value = r.cliente||'';
+  preencherSelectModal('m-departamento', cfg.departamentos, r.departamento);
   preencherSelectModal('m-base', cfg.bases, r.base);
-  preencherSelectModal('m-tecnico', cfg.tecnicos, r.tecnico);
+  preencherTecnicosModal(cfg.tecnicos, r.tecnicos||[]);
   document.getElementById('m-horas').value = n(r.horas);
   document.getElementById('m-valor').value = n(r.valor);
   document.getElementById('m-nfse').value = r.nfse||'';
@@ -1041,7 +1144,7 @@ function abrirNovaOS(){
   document.getElementById('modal-titulo').textContent='Nova OS';
   preencherModal({
     regiao:cfg.regioes[0]||'', status:cfg.statusOS[0]||'', tipo:cfg.tiposOS[0]||'',
-    numeroOS:'', dataAbertura:isoStr(new Date()), cliente:'', base:cfg.bases[0]||'', tecnico:cfg.tecnicos[0]||'',
+    numeroOS:'', dataAbertura:isoStr(new Date()), cliente:'', departamento:cfg.departamentos[0]||'', base:cfg.bases[0]||'', tecnicos:[],
     horas:0, valor:0, nfse:'', dataFaturamento:'', formaPagamento:cfg.formasPagamento[0]||'', observacao:''
   });
   document.getElementById('btn-excluir-os').style.display='none';
@@ -1080,10 +1183,10 @@ function download(name, content, type){
   a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),500);
 }
 document.getElementById('btn-export-csv').addEventListener('click', ()=>{
-  let csv='Regiao;Status;Tipo;NumeroOS;DataAbertura;Cliente;Base;Tecnico;Horas;Valor;NFSe;DataFaturamento;FormaPagamento;Situacao;Observacao\n';
+  let csv='Regiao;Status;Tipo;NumeroOS;DataAbertura;Cliente;Departamento;Base;Tecnicos;Horas;Valor;NFSe;DataFaturamento;FormaPagamento;Situacao;Observacao\n';
   ordenarRegistros().forEach(([,r])=>{
     const sit=computeSituacao(r);
-    csv+=`${r.regiao||''};${r.status||''};${r.tipo||''};${r.numeroOS||''};${r.dataAbertura||''};${(r.cliente||'').replace(/;/g,',')};${r.base||''};${r.tecnico||''};${(n(r.horas)).toFixed(2)};${(n(r.valor)).toFixed(2)};${r.nfse||''};${r.dataFaturamento||''};${r.formaPagamento||''};${sit};${(r.observacao||'').replace(/;/g,',')}\n`;
+    csv+=`${r.regiao||''};${r.status||''};${r.tipo||''};${r.numeroOS||''};${r.dataAbertura||''};${(r.cliente||'').replace(/;/g,',')};${r.departamento||''};${r.base||''};${(r.tecnicos||[]).join(', ')};${(n(r.horas)).toFixed(2)};${(n(r.valor)).toFixed(2)};${r.nfse||''};${r.dataFaturamento||''};${r.formaPagamento||''};${sit};${(r.observacao||'').replace(/;/g,',')}\n`;
   });
   download('faturamento_assistencia_tecnica.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV exportado.');
@@ -1124,6 +1227,7 @@ function _renderParametros0(){
   renderListaSimples('#tbl-p-status', cfg.statusOS, 'statusOS');
   renderListaSimples('#tbl-p-tipo', cfg.tiposOS, 'tiposOS');
   renderListaSimples('#tbl-p-tecnicos', cfg.tecnicos, 'tecnicos');
+  renderListaSimples('#tbl-p-departamentos', cfg.departamentos, 'departamentos');
   renderListaSimples('#tbl-p-bases', cfg.bases, 'bases');
   renderListaSimples('#tbl-p-formapgto', cfg.formasPagamento, 'formasPagamento');
 
@@ -1181,6 +1285,7 @@ function ligarAddSimples(btnId, inpId, chave, upper){
 ligarAddSimples('btn-add-status','p-status-nome','statusOS',false);
 ligarAddSimples('btn-add-tipo','p-tipo-nome','tiposOS',false);
 ligarAddSimples('btn-add-tecnico','p-tecnico-nome','tecnicos',true);
+ligarAddSimples('btn-add-departamento','p-departamento-nome','departamentos',false);
 ligarAddSimples('btn-add-base','p-base-nome','bases',true);
 ligarAddSimples('btn-add-formapgto','p-formapgto-nome','formasPagamento',true);
 
@@ -1356,7 +1461,7 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
 /* ---------- concorrência (ETag + mesclagem por registro/seção) ---------- */
 let cloudEtag=null, acessoEtag=null;
 const dirtyReg=new Set();       // ids de registros alterados (ou excluídos) localmente
-const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
+const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
 let salvando=false, pendente=false;
 
 function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status'); if(!el) return; el.textContent=txt; el.className='sync-status '+(cls||''); el.style.display=txt?'block':'none'; }
@@ -1364,7 +1469,7 @@ function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status')
 function aplicarLocalSobre(base){
   const res={ config: clone(base.config||state.config), registros: clone(base.registros||{}) };
   dirtyReg.forEach(id=>{ if(state.registros[id]) res.registros[id]=clone(state.registros[id]); else delete res.registros[id]; });
-  ['regioes','statusOS','tiposOS','tecnicos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
+  ['regioes','statusOS','tiposOS','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
   if(dirtyConfig.has('periodo')){ res.config.periodoInicio=state.config.periodoInicio; res.config.periodoFim=state.config.periodoFim; }
