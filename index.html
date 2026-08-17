@@ -270,26 +270,55 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="block-title">Meta da Semana</div>
     <div class="totals-strip" id="strip-reg-meta-semana"></div>
 
+    <div class="block-title">Resultados da Semana <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— apresentação semanal, por Data de Abertura da OS</span></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn ghost small" id="btn-reg-semana-prev" type="button">◀ Semana anterior</button>
+      <span id="reg-semana-range" style="font-size:.84rem;font-weight:700;color:var(--azul-escuro);"></span>
+      <button class="btn ghost small" id="btn-reg-semana-next" type="button">Semana seguinte ▶</button>
+    </div>
+    <div class="note">Considera as OS cuja "Data Abertura" (aba Lançamentos) cai na semana acima (Segunda a Domingo). Use "Semana anterior/seguinte" ou o campo "Data de referência" no topo da página para navegar.</div>
+    <div class="totals-strip" id="strip-reg-semana-kpi"></div>
+
     <div class="card">
-      <h3>Status da OS</h3>
+      <h3>Status da OS <span class="h3-side">na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-status">
+        <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Tipo de OS <span class="h3-side">na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-tipo">
+        <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Situação de Faturamento <span class="h3-side">na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-situacao">
+        <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="block-title">Acumulado (todo o período lançado)</div>
+    <div class="card">
+      <h3>Status da OS <span class="h3-side">acumulado</span></h3>
       <div class="tablewrap"><table class="dt" id="tbl-reg-status">
         <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
-      <h3>Tipo de OS</h3>
+      <h3>Tipo de OS <span class="h3-side">acumulado</span></h3>
       <div class="tablewrap"><table class="dt" id="tbl-reg-tipo">
         <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
-      <h3>Situação de Faturamento</h3>
+      <h3>Situação de Faturamento <span class="h3-side">acumulado</span></h3>
       <div class="tablewrap"><table class="dt" id="tbl-reg-situacao">
         <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
-      <h3>Técnico(s) — Horas</h3>
+      <h3>Técnico(s) — Horas <span class="h3-side">acumulado</span></h3>
       <div class="tablewrap"><table class="dt" id="tbl-reg-tecnico">
         <thead><tr><th>Técnico</th><th class="r">Horas</th></tr></thead><tbody></tbody>
       </table></div>
@@ -814,11 +843,12 @@ function renderRegionalAtivo(){
   renderSelectRegional();
   const cfg=state.config, nome=regionalAtivo, ref=refDate();
   document.getElementById('regional-desc').textContent = nome
-    ? `Somente lançamentos da região "${nome}". Os cartões de meta seguem a "Data de referência" no topo da página.`
+    ? `Somente lançamentos da região "${nome}". Os cartões de meta e o filtro semanal seguem a "Data de referência" no topo da página.`
     : 'Nenhuma região cadastrada — adicione uma na aba Parâmetros.';
   if(!nome){
-    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana'].forEach(id=>document.getElementById(id).innerHTML='');
-    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico'].forEach(id=>{
+    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana','strip-reg-semana-kpi'].forEach(id=>document.getElementById(id).innerHTML='');
+    document.getElementById('reg-semana-range').textContent='';
+    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-semana-status','tbl-reg-semana-tipo','tbl-reg-semana-situacao'].forEach(id=>{
       document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
     });
     return;
@@ -831,7 +861,28 @@ function renderRegionalAtivo(){
   document.querySelector('#tbl-reg-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
   document.querySelector('#tbl-reg-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
   document.querySelector('#tbl-reg-tecnico tbody').innerHTML = tableRows(s.porTecnico, cfg.tecnicos, horasFmt);
+
+  /* filtro semanal — Status/Tipo/Situação/Valor da região, por Data de Abertura */
+  const [wA,wB]=weekBounds(ref);
+  document.getElementById('reg-semana-range').textContent = `${ddmm(D(wA))} a ${ddmm(D(wB))} de ${D(wB).getFullYear()}`;
+  const sSemana=statsFor(r=>r.regiao===nome && (r.dataAbertura||'')>=wA && (r.dataAbertura||'')<=wB);
+  document.getElementById('strip-reg-semana-kpi').innerHTML =
+    tbox('OS Abertas na Semana', int(sSemana.totalOS)) +
+    tbox('Valor da Região na Semana (R$)', brl(sSemana.valorTotal), null, {accent:true}) +
+    tbox('Horas na Semana', horasFmt(sSemana.horas)) +
+    tbox('Valor Faturado na Semana (R$)', brl(sSemana.valorFaturado));
+  document.querySelector('#tbl-reg-semana-status tbody').innerHTML = tableRows(sSemana.porStatus, cfg.statusOS, int);
+  document.querySelector('#tbl-reg-semana-tipo tbody').innerHTML = tableRows(sSemana.porTipo, cfg.tiposOS, brl);
+  document.querySelector('#tbl-reg-semana-situacao tbody').innerHTML = tableRows(sSemana.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
 }
+function moverSemanaRegional(dias){
+  const el=document.getElementById('ref-data');
+  const atual=el.value||isoStr(new Date());
+  el.value=isoStr(addDays(D(atual), dias));
+  renderPainel(); renderRegionalAtivo();
+}
+document.getElementById('btn-reg-semana-prev').addEventListener('click', ()=>moverSemanaRegional(-7));
+document.getElementById('btn-reg-semana-next').addEventListener('click', ()=>moverSemanaRegional(7));
 
 /* =========================================================================
    RENDER — LANÇAMENTOS (grade de OS)
