@@ -297,6 +297,12 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
+    <div class="card">
+      <h3>Base <span class="h3-side">na semana</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-base">
+        <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
 
     <div class="block-title">Acumulado (todo o período lançado)</div>
     <div class="card">
@@ -640,12 +646,13 @@ function statsFor(filterFn){
   const cfg=state.config;
   const s={
     totalOS:0, horas:0, valorTotal:0, valorFaturado:0, valorPendente:0, valorNaoAplica:0,
-    porStatus:{}, porTipo:{}, porSituacao:{}, porRegiao:{}, porTecnico:{}
+    porStatus:{}, porTipo:{}, porSituacao:{}, porRegiao:{}, porTecnico:{}, porBase:{}
   };
   cfg.statusOS.forEach(x=>s.porStatus[x]=0);
   cfg.tiposOS.forEach(x=>s.porTipo[x]=0);
   cfg.regioes.forEach(x=>s.porRegiao[x]=0);
   cfg.tecnicos.forEach(x=>s.porTecnico[x]=0);
+  cfg.bases.forEach(x=>s.porBase[x]={qtd:0, horas:0, valor:0});
   [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica].forEach(x=>s.porSituacao[x]=0);
 
   Object.values(state.registros).forEach(r=>{
@@ -660,8 +667,18 @@ function statsFor(filterFn){
     s.porSituacao[sit]=(s.porSituacao[sit]||0)+n(r.valor);
     s.porRegiao[r.regiao]=(s.porRegiao[r.regiao]||0)+n(r.valor);
     s.porTecnico[r.tecnico]=(s.porTecnico[r.tecnico]||0)+n(r.horas);
+    if(!s.porBase[r.base]) s.porBase[r.base]={qtd:0, horas:0, valor:0}; // base fora da lista atual (retrocompat)
+    s.porBase[r.base].qtd++; s.porBase[r.base].horas+=n(r.horas); s.porBase[r.base].valor+=n(r.valor);
   });
   return s;
+}
+function tableRowsBase(porBase, orderList){
+  const chaves = orderList.slice();
+  Object.keys(porBase).forEach(k=>{ if(!chaves.includes(k)) chaves.push(k); }); // inclui bases fora da lista (retrocompat)
+  return chaves.map(k=>{
+    const v=porBase[k]||{qtd:0,horas:0,valor:0};
+    return `<tr><td>${escapeHtml(k)}</td><td class="num">${int(v.qtd)}</td><td class="num">${horasFmt(v.horas)}</td><td class="num">${brl(v.valor)}</td></tr>`;
+  }).join('') || `<tr><td colspan="4" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
 }
 
 function tbox(label, value, sub, opts){
@@ -851,6 +868,7 @@ function renderRegionalAtivo(){
     ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-semana-status','tbl-reg-semana-tipo','tbl-reg-semana-situacao'].forEach(id=>{
       document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
     });
+    document.querySelector('#tbl-reg-semana-base tbody').innerHTML=`<tr><td colspan="4" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
     return;
   }
   const s=statsFor(r=>r.regiao===nome);
@@ -874,6 +892,7 @@ function renderRegionalAtivo(){
   document.querySelector('#tbl-reg-semana-status tbody').innerHTML = tableRows(sSemana.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-reg-semana-tipo tbody').innerHTML = tableRows(sSemana.porTipo, cfg.tiposOS, brl);
   document.querySelector('#tbl-reg-semana-situacao tbody').innerHTML = tableRows(sSemana.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
+  document.querySelector('#tbl-reg-semana-base tbody').innerHTML = tableRowsBase(sSemana.porBase, cfg.bases);
 }
 function moverSemanaRegional(dias){
   const el=document.getElementById('ref-data');
