@@ -219,10 +219,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
 
     <div class="totals-strip" id="strip-geral-kpi"></div>
 
-    <div class="block-title">Meta do Mês — todas as regiões</div>
+    <div class="block-title">Meta do Mês — todas as regiões <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-geral-meta-mes"></div>
 
-    <div class="block-title">Meta da Semana — todas as regiões</div>
+    <div class="block-title">Meta da Semana — todas as regiões <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-geral-meta-semana"></div>
 
     <div class="card">
@@ -269,10 +269,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
 
     <div class="totals-strip" id="strip-reg-kpi"></div>
 
-    <div class="block-title">Meta do Mês</div>
+    <div class="block-title">Meta do Mês <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-reg-meta-mes"></div>
 
-    <div class="block-title">Meta da Semana</div>
+    <div class="block-title">Meta da Semana <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-reg-meta-semana"></div>
 
     <div class="block-title">Andamento Corrente do Departamento <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— tempo corrido, sempre atualizado</span></div>
@@ -357,6 +357,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <div class="field"><label>Região</label><select id="f-regiao"></select></div>
         <div class="field"><label>Status</label><select id="f-status"></select></div>
         <div class="field"><label>Situação</label><select id="f-situacao"></select></div>
+        <div class="field"><label>Base</label><select id="f-base"></select></div>
         <div class="field"><label>Departamento</label><select id="f-departamento"></select></div>
         <div class="field"><label>Técnico</label><select id="f-tecnico"></select></div>
       </div>
@@ -369,7 +370,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div class="tablewrap">
         <table class="dt" id="tbl-registros">
           <thead><tr>
-            <th>Região</th><th>Status</th><th>Nº OS</th><th>Cliente</th><th>Departamento</th><th>Técnico(s)</th>
+            <th>Região</th><th>Status</th><th>Nº OS</th><th>Cliente</th><th>Base</th><th>Departamento</th><th>Técnico(s)</th>
             <th class="r">Valor (R$)</th><th>Situação</th><th></th>
           </tr></thead>
           <tbody></tbody>
@@ -385,7 +386,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
 
     <div class="card">
       <h3>Período da Meta</h3>
-      <p class="pane-desc" style="margin:0 0 10px;">Intervalo (em dias úteis, Seg–Sex) em que a Meta de Faturamento de cada região está em vigor. A Meta do Mês e a Meta da Semana (Painel Geral e aba Regional) rateiam esse valor proporcionalmente aos dias úteis do mês/semana selecionados, dentro deste período.</p>
+      <p class="pane-desc" style="margin:0 0 10px;">Intervalo (em dias úteis, Seg–Sex) em que a Meta de Faturamento de cada região está em vigor. A Meta do Mês e a Meta da Semana (Painel Geral e aba Regional) usam ritmo redistribuído: todo dia, o saldo que falta (meta do período − já faturado) é dividido pelos dias úteis que ainda restam do período, e esse ritmo atualizado é aplicado aos dias úteis do mês/semana selecionados. Se a meta do período já foi batida antes do fim, "Falta para a Meta" passa a mostrar valor negativo.</p>
       <div class="grid" style="max-width:640px;">
         <div class="field"><label>Data Início</label><input type="date" id="p-periodo-inicio"></div>
         <div class="field"><label>Data Fim</label><input type="date" id="p-periodo-fim"></div>
@@ -780,10 +781,31 @@ function diasUteisPeriodo(){
   if(!periodoValido()) return 0;
   return diasUteisRange(state.config.periodoInicio, state.config.periodoFim);
 }
-/* meta por dia útil = meta total do período ÷ dias úteis do período */
-function metaDiaria(regiaoFiltro){
-  const du=diasUteisPeriodo();
-  return du>0 ? metaTotalPeriodo(regiaoFiltro)/du : 0;
+/* hoje, no formato ISO (yyyy-mm-dd) */
+function hojeISO(){ return isoStr(new Date()); }
+/* dias úteis que restam do Período da Meta a partir de hoje (inclusive); 0 se o período já terminou ou é inválido */
+function diasUteisRestantesPeriodo(){
+  if(!periodoValido()) return 0;
+  const cfg=state.config, hoje=hojeISO();
+  if(hoje>cfg.periodoFim) return 0;
+  const inicio = hoje<cfg.periodoInicio ? cfg.periodoInicio : hoje;
+  return diasUteisRange(inicio, cfg.periodoFim);
+}
+/* faturado dentro do Período da Meta, do início até hoje (ou até o fim do período, se já passou) */
+function realizadoPeriodoAteHoje(regiaoFiltro){
+  if(!periodoValido()) return 0;
+  const cfg=state.config, hoje=hojeISO();
+  const fim = hoje>cfg.periodoFim ? cfg.periodoFim : hoje;
+  return somaFaturadoPeriodo(cfg.periodoInicio, fim, regiaoFiltro);
+}
+/* meta por dia útil, redistribuída: (meta total do período − já faturado até hoje) ÷ dias úteis que restam do período.
+   Ritmo "vivo": recalcula todo dia a partir do saldo real, em vez de usar uma taxa fixa definida no início do período.
+   Se a meta do período já foi batida antes do fim, o saldo fica negativo e a meta diária também — refletido em "Falta para a Meta". */
+function metaDiariaRedistribuida(regiaoFiltro){
+  const dias=diasUteisRestantesPeriodo();
+  if(dias<=0) return 0;
+  const saldo=metaTotalPeriodo(regiaoFiltro)-realizadoPeriodoAteHoje(regiaoFiltro);
+  return saldo/dias;
 }
 /* recorta [aISO,bISO] pelo Período da Meta configurado; retorna null se não houver interseção */
 function clipAoPeriodo(aISO, bISO){
@@ -813,7 +835,7 @@ function metaMesCalc(regiaoFiltro, refISO){
   if(!clip) return {meta:0, real:0, mA:mA0, mB:mB0, foraDoPeriodo:true};
   const [mA,mB]=clip;
   const dias=diasUteisRange(mA,mB);
-  const meta=metaDiaria(regiaoFiltro)*dias;
+  const meta=metaDiariaRedistribuida(regiaoFiltro)*dias;
   const real=somaFaturadoPeriodo(mA,mB,regiaoFiltro);
   return {meta, real, mA, mB, foraDoPeriodo:false};
 }
@@ -825,7 +847,7 @@ function metaSemanaCalc(regiaoFiltro, refISO){
   const wA = wA0<mA ? mA : wA0, wB = wB0>mB ? mB : wB0;
   if(wA>wB) return {metaSemanaVal:0, real:0, wA:wA0, wB:wB0, foraDoPeriodo:true};
   const diasSemana=diasUteisRange(wA,wB);
-  const metaSemanaVal=metaDiaria(regiaoFiltro)*diasSemana;
+  const metaSemanaVal=metaDiariaRedistribuida(regiaoFiltro)*diasSemana;
   const real=somaFaturadoPeriodo(wA,wB,regiaoFiltro);
   return {metaSemanaVal, real, wA, wB, foraDoPeriodo:false};
 }
@@ -835,7 +857,7 @@ function metaMesStripHtml(regiaoFiltro, refISO){
     return tbox('Meta do Mês (R$)', brl0(0), mesLabel(refISO)+' — fora do Período da Meta') +
       tbox('Realizado no Mês (R$)', brl(0)) + tbox('% Atingido', pct(null)) + tbox('Falta para a Meta (R$)', brl0(0), null, {accent:true});
   }
-  const falta=Math.max(meta-real,0), p=meta>0?real/meta:null;
+  const falta=meta-real, p=meta>0?real/meta:null;
   return tbox('Meta do Mês (R$)', brl0(meta), mesLabel(refISO)) +
     tbox('Realizado no Mês (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
     tbox('% Atingido', pct(p)) +
@@ -847,7 +869,7 @@ function metaSemanaStripHtml(regiaoFiltro, refISO){
     return tbox('Meta da Semana (R$)', brl0(0), `${ddmm(D(wA))} a ${ddmm(D(wB))} — fora do Período da Meta`) +
       tbox('Realizado na Semana (R$)', brl(0)) + tbox('% Atingido', pct(null)) + tbox('Falta para a Meta (R$)', brl0(0), null, {accent:true});
   }
-  const falta=Math.max(metaSemanaVal-real,0), p=metaSemanaVal>0?real/metaSemanaVal:null;
+  const falta=metaSemanaVal-real, p=metaSemanaVal>0?real/metaSemanaVal:null;
   return tbox('Meta da Semana (R$)', brl0(metaSemanaVal), `${ddmm(D(wA))} a ${ddmm(D(wB))}`) +
     tbox('Realizado na Semana (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
     tbox('% Atingido', pct(p)) +
@@ -967,7 +989,7 @@ function filtroAtual(){
     busca: fval('f-busca').trim().toLowerCase(),
     regiao: fval('f-regiao'), status: fval('f-status'),
     situacao: fval('f-situacao'), tecnico: fval('f-tecnico'),
-    departamento: fval('f-departamento')
+    departamento: fval('f-departamento'), base: fval('f-base')
   };
 }
 function fillFilterSelect(id, list, allLabel){
@@ -983,6 +1005,7 @@ function renderFiltrosSelects(){
   fillFilterSelect('f-situacao', [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], 'Todas as situações');
   fillFilterSelect('f-tecnico', cfg.tecnicos, 'Todos os técnicos');
   fillFilterSelect('f-departamento', cfg.departamentos, 'Todos os departamentos');
+  fillFilterSelect('f-base', cfg.bases, 'Todas as bases');
 }
 function aplicarFiltros(entries){
   const f=filtroAtual();
@@ -991,6 +1014,7 @@ function aplicarFiltros(entries){
     if(f.status && r.status!==f.status) return false;
     if(f.tecnico && !(r.tecnicos||[]).includes(f.tecnico)) return false;
     if(f.departamento && r.departamento!==f.departamento) return false;
+    if(f.base && r.base!==f.base) return false;
     if(f.situacao && computeSituacao(r)!==f.situacao) return false;
     if(f.busca){
       const alvo=[r.cliente,r.numeroOS,r.base,r.observacao].map(x=>String(x||'').toLowerCase()).join(' | ');
@@ -999,12 +1023,12 @@ function aplicarFiltros(entries){
     return true;
   });
 }
-['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento'].forEach(id=>{
+['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento','f-base'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('input', renderRegistros); el.addEventListener('change', renderRegistros);
 });
 document.getElementById('btn-limpar-filtros').addEventListener('click', ()=>{
-  ['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento','f-base'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   renderRegistros();
 });
 
@@ -1016,6 +1040,7 @@ function linhaCompacta(id, r){
     <td>${escapeHtml(r.status||'—')}</td>
     <td>${escapeHtml(r.numeroOS||'—')}</td>
     <td class="cel-cliente" title="${escapeHtml(r.cliente||'')}">${escapeHtml(r.cliente||'(sem cliente)')}</td>
+    <td>${escapeHtml(r.base||'—')}</td>
     <td>${escapeHtml(r.departamento||'—')}</td>
     <td>${escapeHtml((r.tecnicos&&r.tecnicos.length)?r.tecnicos.join(', '):'—')}</td>
     <td class="num">${brl(n(r.valor))}</td>
@@ -1029,7 +1054,7 @@ function renderRegistros(){
   const filtrados=aplicarFiltros(todos);
   const tb=document.querySelector('#tbl-registros tbody');
   tb.innerHTML = filtrados.map(([id,r])=>linhaCompacta(id,r)).join('')
-    || `<tr><td colspan="9" style="text-align:center;color:var(--texto-suave);padding:18px;">Nenhuma OS encontrada com os filtros atuais.</td></tr>`;
+    || `<tr><td colspan="10" style="text-align:center;color:var(--texto-suave);padding:18px;">Nenhuma OS encontrada com os filtros atuais.</td></tr>`;
   tb.querySelectorAll('[data-edit-os]').forEach(b=>b.addEventListener('click', ()=>abrirEdicaoOS(b.dataset.editOs)));
 
   let horasF=0, valorF=0;
