@@ -90,6 +90,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   }
   .field input:focus,.field textarea:focus{outline:2px solid var(--azul-claro);outline-offset:1px;}
   .field.readonly input{background:var(--areia-escura);color:var(--texto-suave);}
+  .field select:disabled{background:var(--areia-escura);color:var(--texto-suave);cursor:not-allowed;}
 
   .block-title{
     font-family:var(--fonte-titulo);color:var(--azul-escuro);font-size:1.05rem;
@@ -423,8 +424,9 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="card">
       <h3>Tipo de OS</h3>
       <div class="tablewrap" style="margin-bottom:10px;">
-        <table class="dt" id="tbl-p-tipo"><thead><tr><th>Tipo</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
+        <table class="dt" id="tbl-p-tipo"><thead><tr><th>Tipo</th><th style="width:130px;text-align:center;">Usa Departamento?</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
       </div>
+      <div class="note">O campo "Departamento" só fica liberado para preenchimento no cadastro da OS quando o Tipo selecionado está marcado aqui como "Usa Departamento?" (por padrão, só "Interna").</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Novo tipo</label><input type="text" id="p-tipo-nome" placeholder="ex: Instalação"></div>
         <button class="btn primary small" id="btn-add-tipo" type="button">+ Tipo</button>
@@ -587,6 +589,7 @@ function defaultState(){
       statusOS:['Em Andamento','Fechada','Pausada'],
       statusFechados:['Fechada'], // quais status contam como concluído/fechado (o resto é "em aberto")
       tiposOS:['Interna','Cliente','Garantia'],
+      tiposComDepartamento:['Interna'], // quais Tipos de OS liberam o preenchimento de Departamento
       tecnicos:['ALTEMIR JOÃO','LEONARDO FRANCO'],
       departamentos:[],
       bases:['PALMAS - 01','CRISTALINA - 07','PARACATU - 08','FORMOSA - 10','NOVA CRIXÁS - 12'],
@@ -612,6 +615,8 @@ function withDefaults(s){
   if(!Array.isArray(s.config.departamentos)) s.config.departamentos=d.config.departamentos; // lista pode ficar vazia (sem itens padrão)
   if(!Array.isArray(s.config.statusFechados)) s.config.statusFechados=d.config.statusFechados.slice();
   s.config.statusFechados=s.config.statusFechados.filter(x=>s.config.statusOS.includes(x)); // remove entradas órfãs (status removido)
+  if(!Array.isArray(s.config.tiposComDepartamento)) s.config.tiposComDepartamento=d.config.tiposComDepartamento.slice();
+  s.config.tiposComDepartamento=s.config.tiposComDepartamento.filter(x=>s.config.tiposOS.includes(x)); // remove entradas órfãs (tipo removido)
   s.config.metas=Object.assign({}, d.config.metas, s.config.metas||{});
   s.config.situacoes=Object.assign({}, d.config.situacoes, s.config.situacoes||{});
   if(!s.config.chaveBaixaInterna) s.config.chaveBaixaInterna=d.config.chaveBaixaInterna;
@@ -1045,15 +1050,24 @@ function preencherTecnicosModal(list, selecionados){
 function lerTecnicosModal(){
   return Array.from(document.querySelectorAll('#m-tecnicos input[type=checkbox]:checked')).map(c=>c.value);
 }
+function departamentoLiberado(tipo){ return state.config.tiposComDepartamento.includes(tipo); }
+function atualizarDepartamentoModal(){
+  const tipo=document.getElementById('m-tipo').value;
+  const sel=document.getElementById('m-departamento');
+  const liberado=departamentoLiberado(tipo);
+  sel.disabled=!liberado;
+  if(!liberado) sel.value='';
+}
 function lerFormModal(){
+  const tipo=document.getElementById('m-tipo').value;
   return {
     regiao: document.getElementById('m-regiao').value,
     status: document.getElementById('m-status').value,
-    tipo: document.getElementById('m-tipo').value,
+    tipo: tipo,
     numeroOS: document.getElementById('m-numeroOS').value.trim(),
     dataAbertura: document.getElementById('m-dataAbertura').value,
     cliente: document.getElementById('m-cliente').value.trim(),
-    departamento: document.getElementById('m-departamento').value,
+    departamento: departamentoLiberado(tipo) ? document.getElementById('m-departamento').value : '', // regra: só Tipos marcados em Parâmetros liberam Departamento
     base: document.getElementById('m-base').value,
     tecnicos: lerTecnicosModal(),
     horas: n(document.getElementById('m-horas').value),
@@ -1082,6 +1096,7 @@ function preencherModal(r){
   document.getElementById('m-dataFaturamento').value = r.dataFaturamento||'';
   preencherSelectModal('m-formaPagamento', cfg.formasPagamento, r.formaPagamento);
   document.getElementById('m-observacao').value = r.observacao||'';
+  atualizarDepartamentoModal();
   atualizarSituacaoModal();
 }
 function abrirEdicaoOS(id){
@@ -1110,6 +1125,7 @@ function fecharModalOS(){ document.getElementById('modal-os').style.display='non
   const el=document.getElementById(id);
   el.addEventListener('input', atualizarSituacaoModal); el.addEventListener('change', atualizarSituacaoModal);
 });
+document.getElementById('m-tipo').addEventListener('change', atualizarDepartamentoModal);
 document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalOS);
 document.getElementById('modal-os').addEventListener('click', e=>{ if(e.target.id==='modal-os') fecharModalOS(); });
 document.getElementById('btn-salvar-os').addEventListener('click', ()=>{
@@ -1179,7 +1195,7 @@ function _renderParametros0(){
   });
 
   renderListaStatus();
-  renderListaSimples('#tbl-p-tipo', cfg.tiposOS, 'tiposOS');
+  renderListaTipos();
   renderListaSimples('#tbl-p-tecnicos', cfg.tecnicos, 'tecnicos');
   renderListaSimples('#tbl-p-departamentos', cfg.departamentos, 'departamentos');
   renderListaSimples('#tbl-p-bases', cfg.bases, 'bases');
@@ -1211,6 +1227,20 @@ function renderListaStatus(){
     dirtyConfig.add('statusFechados'); save(); renderAll();
   }));
 }
+function renderListaTipos(){
+  const cfg=state.config;
+  document.querySelector('#tbl-p-tipo tbody').innerHTML = cfg.tiposOS.map((v,i)=>
+    `<tr><td>${escapeHtml(v)}</td>
+      <td style="text-align:center;"><input type="checkbox" data-tipo-departamento="${escapeHtml(v)}" ${cfg.tiposComDepartamento.includes(v)?'checked':''}></td>
+      <td><button class="btn danger small" data-rem="tiposOS:${i}" type="button">remover</button></td></tr>`).join('')
+    || `<tr><td colspan="3" style="color:var(--texto-suave)">Nenhum item cadastrado.</td></tr>`;
+  document.querySelectorAll('[data-tipo-departamento]').forEach(cb=>cb.addEventListener('change', ()=>{
+    const nome=cb.dataset.tipoDepartamento;
+    if(cb.checked){ if(!cfg.tiposComDepartamento.includes(nome)) cfg.tiposComDepartamento.push(nome); }
+    else{ cfg.tiposComDepartamento=cfg.tiposComDepartamento.filter(x=>x!==nome); }
+    dirtyConfig.add('tiposComDepartamento'); save(); renderAll();
+  }));
+}
 function atualizarDiasUteisPeriodo(){
   const el=document.getElementById('p-periodo-diasuteis'), aviso=document.getElementById('p-periodo-aviso');
   if(!el) return;
@@ -1232,6 +1262,10 @@ document.getElementById('pane-parametros').addEventListener('click', e=>{
   if(chave==='statusOS'){
     state.config.statusFechados=state.config.statusFechados.filter(x=>state.config.statusOS.includes(x));
     dirtyConfig.add('statusFechados');
+  }
+  if(chave==='tiposOS'){
+    state.config.tiposComDepartamento=state.config.tiposComDepartamento.filter(x=>state.config.tiposOS.includes(x));
+    dirtyConfig.add('tiposComDepartamento');
   }
   dirtyConfig.add(chave); save(); renderParametros(); renderAll();
 });
@@ -1433,7 +1467,7 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
 /* ---------- concorrência (ETag + mesclagem por registro/seção) ---------- */
 let cloudEtag=null, acessoEtag=null;
 const dirtyReg=new Set();       // ids de registros alterados (ou excluídos) localmente
-const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, statusFechados, tiposOS, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
+const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, statusFechados, tiposOS, tiposComDepartamento, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
 let salvando=false, pendente=false;
 
 function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status'); if(!el) return; el.textContent=txt; el.className='sync-status '+(cls||''); el.style.display=txt?'block':'none'; }
@@ -1441,7 +1475,7 @@ function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status')
 function aplicarLocalSobre(base){
   const res={ config: clone(base.config||state.config), registros: clone(base.registros||{}) };
   dirtyReg.forEach(id=>{ if(state.registros[id]) res.registros[id]=clone(state.registros[id]); else delete res.registros[id]; });
-  ['regioes','statusOS','statusFechados','tiposOS','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
+  ['regioes','statusOS','statusFechados','tiposOS','tiposComDepartamento','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
   if(dirtyConfig.has('periodo')){ res.config.periodoInicio=state.config.periodoInicio; res.config.periodoFim=state.config.periodoFim; }
