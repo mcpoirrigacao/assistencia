@@ -274,78 +274,37 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="block-title">Meta da Semana</div>
     <div class="totals-strip" id="strip-reg-meta-semana"></div>
 
-    <div class="block-title">Resultados da Semana <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— apresentação semanal, por Data de Abertura da OS</span></div>
+    <div class="block-title">Andamento Corrente do Departamento <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— tempo corrido, sempre atualizado</span></div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
       <button class="btn ghost small" id="btn-reg-semana-prev" type="button">◀ Semana anterior</button>
       <span id="reg-semana-range" style="font-size:.84rem;font-weight:700;color:var(--azul-escuro);"></span>
       <button class="btn ghost small" id="btn-reg-semana-next" type="button">Semana seguinte ▶</button>
     </div>
-    <div class="note">Considera as OS cuja "Data Abertura" (aba Lançamentos) cai na semana acima (Segunda a Domingo). Use "Semana anterior/seguinte" ou o campo "Data de referência" no topo da página para navegar.</div>
-    <div class="totals-strip" id="strip-reg-semana-kpi"></div>
+    <div class="note">"OS em Aberto" e "Pendente de Faturar" trazem OS de qualquer época (inclusive de semanas anteriores) que ainda estão em andamento/pausadas ou que ainda não foram faturadas — não dependem da semana acima. Só "Faturado na Semana" usa a semana selecionada; navegue com os botões ou pelo campo "Data de referência" no topo da página. Em Parâmetros → Status da OS você define quais status contam como "concluído".</div>
+    <div class="totals-strip" id="strip-reg-corrente-kpi"></div>
 
     <div class="card">
-      <h3>Status da OS <span class="h3-side">na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-status">
+      <h3>OS em Aberto <span class="h3-side">por status — tempo corrido</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-aberto-status">
         <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
-      <h3>Tipo de OS <span class="h3-side">na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-tipo">
-        <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Situação de Faturamento <span class="h3-side">na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-situacao">
-        <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Base <span class="h3-side">na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-base">
+      <h3>OS em Aberto <span class="h3-side">por base — tempo corrido</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-aberto-base">
         <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
     <div class="card">
-      <h3>Departamento <span class="h3-side">na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-semana-departamento">
+      <h3>OS em Aberto <span class="h3-side">por departamento — tempo corrido</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-aberto-departamento">
         <thead><tr><th>Departamento</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
-
-    <div class="block-title">Faturamento da Semana <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— mesma semana acima, por Data do Faturamento da OS</span></div>
-    <div class="note">Considera as OS cuja "Data do Faturamento" (aba Lançamentos) cai na semana acima. Diferente do bloco "Resultados da Semana" (que usa a Data de Abertura), aqui só entram OS que já tiveram o faturamento lançado — é a mesma base de cálculo do "Realizado" nos cartões de Meta do Mês/Semana.</div>
-    <div class="totals-strip" id="strip-reg-fatsemana-kpi"></div>
-
     <div class="card">
-      <h3>Status da OS <span class="h3-side">faturamento na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-status">
-        <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Tipo de OS <span class="h3-side">faturamento na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-tipo">
-        <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Situação de Faturamento <span class="h3-side">faturamento na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-situacao">
-        <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Base <span class="h3-side">faturamento na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-base">
+      <h3>Pendente de Faturar <span class="h3-side">por base — tempo corrido</span></h3>
+      <div class="tablewrap"><table class="dt" id="tbl-reg-pendfat-base">
         <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <h3>Departamento <span class="h3-side">faturamento na semana</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-fatsemana-departamento">
-        <thead><tr><th>Departamento</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
       </table></div>
     </div>
 
@@ -452,8 +411,9 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="card">
       <h3>Status da OS</h3>
       <div class="tablewrap" style="margin-bottom:10px;">
-        <table class="dt" id="tbl-p-status"><thead><tr><th>Status</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
+        <table class="dt" id="tbl-p-status"><thead><tr><th>Status</th><th style="width:130px;text-align:center;">Conclui a OS?</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
       </div>
+      <div class="note">Status marcados como "Conclui a OS?" contam como concluídos/fechados. Os demais aparecem como "OS em Aberto" no bloco "Andamento Corrente" da aba Regional (tempo corrido, independente da semana).</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Novo status</label><input type="text" id="p-status-nome" placeholder="ex: Aguardando Peça"></div>
         <button class="btn primary small" id="btn-add-status" type="button">+ Status</button>
@@ -625,6 +585,7 @@ function defaultState(){
     config:{
       regioes:['Regional I','Regional II'],
       statusOS:['Em Andamento','Fechada','Pausada'],
+      statusFechados:['Fechada'], // quais status contam como concluído/fechado (o resto é "em aberto")
       tiposOS:['Interna','Cliente','Garantia'],
       tecnicos:['ALTEMIR JOÃO','LEONARDO FRANCO'],
       departamentos:[],
@@ -649,6 +610,8 @@ function withDefaults(s){
     if(!Array.isArray(s.config[k])||!s.config[k].length) s.config[k]=d.config[k];
   });
   if(!Array.isArray(s.config.departamentos)) s.config.departamentos=d.config.departamentos; // lista pode ficar vazia (sem itens padrão)
+  if(!Array.isArray(s.config.statusFechados)) s.config.statusFechados=d.config.statusFechados.slice();
+  s.config.statusFechados=s.config.statusFechados.filter(x=>s.config.statusOS.includes(x)); // remove entradas órfãs (status removido)
   s.config.metas=Object.assign({}, d.config.metas, s.config.metas||{});
   s.config.situacoes=Object.assign({}, d.config.situacoes, s.config.situacoes||{});
   if(!s.config.chaveBaixaInterna) s.config.chaveBaixaInterna=d.config.chaveBaixaInterna;
@@ -934,12 +897,12 @@ function renderRegionalAtivo(){
     ? `Somente lançamentos da região "${nome}". Os cartões de meta e o filtro semanal seguem a "Data de referência" no topo da página.`
     : 'Nenhuma região cadastrada — adicione uma na aba Parâmetros.';
   if(!nome){
-    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana','strip-reg-semana-kpi','strip-reg-fatsemana-kpi'].forEach(id=>document.getElementById(id).innerHTML='');
+    ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana','strip-reg-corrente-kpi'].forEach(id=>document.getElementById(id).innerHTML='');
     document.getElementById('reg-semana-range').textContent='';
-    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-semana-status','tbl-reg-semana-tipo','tbl-reg-semana-situacao','tbl-reg-fatsemana-status','tbl-reg-fatsemana-tipo','tbl-reg-fatsemana-situacao'].forEach(id=>{
+    ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-aberto-status'].forEach(id=>{
       document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
     });
-    ['tbl-reg-semana-base','tbl-reg-semana-departamento','tbl-reg-fatsemana-base','tbl-reg-fatsemana-departamento'].forEach(id=>{
+    ['tbl-reg-aberto-base','tbl-reg-aberto-departamento','tbl-reg-pendfat-base'].forEach(id=>{
       document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="4" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
     });
     return;
@@ -953,33 +916,24 @@ function renderRegionalAtivo(){
   document.querySelector('#tbl-reg-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
   document.querySelector('#tbl-reg-tecnico tbody').innerHTML = tableRows(s.porTecnico, cfg.tecnicos, horasFmt);
 
-  /* filtro semanal — Status/Tipo/Situação/Valor da região, por Data de Abertura */
+  /* Andamento Corrente — visão unificada e "tempo corrido" (não depende da semana):
+     - "OS em Aberto" = status que NÃO está marcado como "conclui a OS" em Parâmetros (qualquer época).
+     - "Pendente de Faturar" = Situação calculada = Pendente (qualquer época, mesmo OS já fechada).
+     Só "Faturado na Semana" usa a semana de referência (mesma base do "Realizado" da Meta da Semana). */
   const [wA,wB]=weekBounds(ref);
   document.getElementById('reg-semana-range').textContent = `${ddmm(D(wA))} a ${ddmm(D(wB))} de ${D(wB).getFullYear()}`;
-  const sSemana=statsFor(r=>r.regiao===nome && (r.dataAbertura||'')>=wA && (r.dataAbertura||'')<=wB);
-  document.getElementById('strip-reg-semana-kpi').innerHTML =
-    tbox('OS Abertas na Semana', int(sSemana.totalOS)) +
-    tbox('Valor da Região na Semana (R$)', brl(sSemana.valorTotal), null, {accent:true}) +
-    tbox('Horas na Semana', horasFmt(sSemana.horas)) +
-    tbox('Valor Faturado na Semana (R$)', brl(sSemana.valorFaturado));
-  document.querySelector('#tbl-reg-semana-status tbody').innerHTML = tableRows(sSemana.porStatus, cfg.statusOS, int);
-  document.querySelector('#tbl-reg-semana-tipo tbody').innerHTML = tableRows(sSemana.porTipo, cfg.tiposOS, brl);
-  document.querySelector('#tbl-reg-semana-situacao tbody').innerHTML = tableRows(sSemana.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
-  document.querySelector('#tbl-reg-semana-base tbody').innerHTML = tableRowsBase(sSemana.porBase, cfg.bases);
-  document.querySelector('#tbl-reg-semana-departamento tbody').innerHTML = tableRowsBase(sSemana.porDepartamento, cfg.departamentos);
-
-  /* faturamento da semana — mesma semana [wA,wB], agora por Data do Faturamento (mesma base do "Realizado" da Meta) */
+  const sAberto=statsFor(r=>r.regiao===nome && !cfg.statusFechados.includes(r.status));
+  const sPendFat=statsFor(r=>r.regiao===nome && computeSituacao(r)===cfg.situacoes.pendente);
   const sFatSemana=statsFor(r=>r.regiao===nome && (r.dataFaturamento||'')>=wA && (r.dataFaturamento||'')<=wB);
-  document.getElementById('strip-reg-fatsemana-kpi').innerHTML =
-    tbox('OS c/ Faturamento na Semana', int(sFatSemana.totalOS)) +
-    tbox('Valor Faturado na Semana (R$)', brl(sFatSemana.valorFaturado), null, {accent:true}) +
-    tbox('Horas Faturadas na Semana', horasFmt(sFatSemana.horas)) +
-    tbox('Valor Total Lançado na Semana (R$)', brl(sFatSemana.valorTotal));
-  document.querySelector('#tbl-reg-fatsemana-status tbody').innerHTML = tableRows(sFatSemana.porStatus, cfg.statusOS, int);
-  document.querySelector('#tbl-reg-fatsemana-tipo tbody').innerHTML = tableRows(sFatSemana.porTipo, cfg.tiposOS, brl);
-  document.querySelector('#tbl-reg-fatsemana-situacao tbody').innerHTML = tableRows(sFatSemana.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
-  document.querySelector('#tbl-reg-fatsemana-base tbody').innerHTML = tableRowsBase(sFatSemana.porBase, cfg.bases);
-  document.querySelector('#tbl-reg-fatsemana-departamento tbody').innerHTML = tableRowsBase(sFatSemana.porDepartamento, cfg.departamentos);
+  document.getElementById('strip-reg-corrente-kpi').innerHTML =
+    tbox('OS em Aberto', int(sAberto.totalOS), 'tempo corrido') +
+    tbox('Valor Pendente de Faturar (R$)', brl(sPendFat.valorTotal), 'tempo corrido', {accent:true}) +
+    tbox('Horas em Aberto', horasFmt(sAberto.horas), 'tempo corrido') +
+    tbox('Faturado na Semana (R$)', brl(sFatSemana.valorFaturado), `${ddmm(D(wA))} a ${ddmm(D(wB))}`);
+  document.querySelector('#tbl-reg-aberto-status tbody').innerHTML = tableRows(sAberto.porStatus, cfg.statusOS, int);
+  document.querySelector('#tbl-reg-aberto-base tbody').innerHTML = tableRowsBase(sAberto.porBase, cfg.bases);
+  document.querySelector('#tbl-reg-aberto-departamento tbody').innerHTML = tableRowsBase(sAberto.porDepartamento, cfg.departamentos);
+  document.querySelector('#tbl-reg-pendfat-base tbody').innerHTML = tableRowsBase(sPendFat.porBase, cfg.bases);
 }
 function moverSemanaRegional(dias){
   const el=document.getElementById('ref-data');
@@ -1224,7 +1178,7 @@ function _renderParametros0(){
     dirtyConfig.add('regioes'); dirtyConfig.add('metas'); save(); renderParametros(); renderAll();
   });
 
-  renderListaSimples('#tbl-p-status', cfg.statusOS, 'statusOS');
+  renderListaStatus();
   renderListaSimples('#tbl-p-tipo', cfg.tiposOS, 'tiposOS');
   renderListaSimples('#tbl-p-tecnicos', cfg.tecnicos, 'tecnicos');
   renderListaSimples('#tbl-p-departamentos', cfg.departamentos, 'departamentos');
@@ -1242,6 +1196,20 @@ function renderListaSimples(sel, arr, chave){
   document.querySelector(sel+' tbody').innerHTML = arr.map((v,i)=>
     `<tr><td>${escapeHtml(v)}</td><td><button class="btn danger small" data-rem="${chave}:${i}" type="button">remover</button></td></tr>`).join('')
     || `<tr><td colspan="2" style="color:var(--texto-suave)">Nenhum item cadastrado.</td></tr>`;
+}
+function renderListaStatus(){
+  const cfg=state.config;
+  document.querySelector('#tbl-p-status tbody').innerHTML = cfg.statusOS.map((v,i)=>
+    `<tr><td>${escapeHtml(v)}</td>
+      <td style="text-align:center;"><input type="checkbox" data-status-fechado="${escapeHtml(v)}" ${cfg.statusFechados.includes(v)?'checked':''}></td>
+      <td><button class="btn danger small" data-rem="statusOS:${i}" type="button">remover</button></td></tr>`).join('')
+    || `<tr><td colspan="3" style="color:var(--texto-suave)">Nenhum item cadastrado.</td></tr>`;
+  document.querySelectorAll('[data-status-fechado]').forEach(cb=>cb.addEventListener('change', ()=>{
+    const nome=cb.dataset.statusFechado;
+    if(cb.checked){ if(!cfg.statusFechados.includes(nome)) cfg.statusFechados.push(nome); }
+    else{ cfg.statusFechados=cfg.statusFechados.filter(x=>x!==nome); }
+    dirtyConfig.add('statusFechados'); save(); renderAll();
+  }));
 }
 function atualizarDiasUteisPeriodo(){
   const el=document.getElementById('p-periodo-diasuteis'), aviso=document.getElementById('p-periodo-aviso');
@@ -1261,6 +1229,10 @@ document.getElementById('pane-parametros').addEventListener('click', e=>{
   const b=e.target.closest('[data-rem]'); if(!b) return;
   const [chave, idxStr]=b.dataset.rem.split(':'); const idx=+idxStr;
   state.config[chave].splice(idx,1);
+  if(chave==='statusOS'){
+    state.config.statusFechados=state.config.statusFechados.filter(x=>state.config.statusOS.includes(x));
+    dirtyConfig.add('statusFechados');
+  }
   dirtyConfig.add(chave); save(); renderParametros(); renderAll();
 });
 document.getElementById('btn-add-regiao').addEventListener('click', ()=>{
@@ -1461,7 +1433,7 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
 /* ---------- concorrência (ETag + mesclagem por registro/seção) ---------- */
 let cloudEtag=null, acessoEtag=null;
 const dirtyReg=new Set();       // ids de registros alterados (ou excluídos) localmente
-const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, tiposOS, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
+const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, statusFechados, tiposOS, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna
 let salvando=false, pendente=false;
 
 function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status'); if(!el) return; el.textContent=txt; el.className='sync-status '+(cls||''); el.style.display=txt?'block':'none'; }
@@ -1469,7 +1441,7 @@ function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status')
 function aplicarLocalSobre(base){
   const res={ config: clone(base.config||state.config), registros: clone(base.registros||{}) };
   dirtyReg.forEach(id=>{ if(state.registros[id]) res.registros[id]=clone(state.registros[id]); else delete res.registros[id]; });
-  ['regioes','statusOS','tiposOS','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
+  ['regioes','statusOS','statusFechados','tiposOS','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
   if(dirtyConfig.has('periodo')){ res.config.periodoInicio=state.config.periodoInicio; res.config.periodoFim=state.config.periodoFim; }
