@@ -123,6 +123,8 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   table.dt tr:hover td{background:#fbf7ef;}
   table.dt td.num{font-family:var(--fonte-dado);text-align:right;}
   table.dt tr.total-row td{background:var(--areia-escura);font-weight:700;color:var(--azul-escuro);border-top:2px solid var(--azul-escuro);}
+  table.dt tr.row-faturado td{background:#e9f6e5;}
+  table.dt tr.row-faturado:hover td{background:#deefd8;}
   table.dt input[type=number]{width:100%;min-width:78px;padding:5px 6px;border:1px solid var(--borda);border-radius:4px;text-align:right;font-family:var(--fonte-dado);font-size:.82rem;background:#fffdf9;}
   table.dt input[type=text],table.dt input[type=date]{width:100%;min-width:90px;padding:5px 6px;border:1px solid var(--borda);border-radius:4px;font-size:.8rem;background:#fffdf9;font-family:var(--fonte-corpo);}
   table.dt select{width:100%;min-width:100px;padding:5px 4px;border:1px solid var(--borda);border-radius:4px;font-size:.8rem;background:#fffdf9;font-family:var(--fonte-corpo);}
@@ -339,7 +341,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   <!-- ============== LANÇAMENTOS ============== -->
   <section class="pane" id="pane-lancamentos">
     <h2 class="pane-title">Lançamentos de OS</h2>
-    <p class="pane-desc">Use os filtros para localizar uma OS já lançada e clique em "editar" para atualizá-la. "Situação de Faturamento" é calculada automaticamente a partir de NFS-e, Data do Faturamento e Forma de Pagamento.</p>
+    <p class="pane-desc">Use os filtros para localizar uma OS já lançada e clique em "editar" para atualizá-la. "Situação de Faturamento" é calculada automaticamente a partir de NFS-e, Data do Faturamento e Forma de Pagamento. Linhas destacadas em <span style="background:#e9f6e5;padding:1px 6px;border-radius:3px;">verde claro</span> já possuem Data do Faturamento preenchida (qualquer Tipo de OS).</p>
 
     <div class="hint-row">
       <button class="btn primary small" id="btn-add-os" type="button">+ Nova OS</button>
@@ -1035,7 +1037,8 @@ document.getElementById('btn-limpar-filtros').addEventListener('click', ()=>{
 /* ---------- tabela compacta (só o essencial; edição via modal) ---------- */
 function linhaCompacta(id, r){
   const sit=computeSituacao(r);
-  return `<tr data-id="${id}">
+  const temFaturamento=!!(r.dataFaturamento||'').trim();
+  return `<tr data-id="${id}"${temFaturamento?' class="row-faturado"':''}>
     <td><span class="reg ${regClass(r.regiao)}">${escapeHtml(r.regiao||'—')}</span></td>
     <td>${escapeHtml(r.status||'—')}</td>
     <td>${escapeHtml(r.numeroOS||'—')}</td>
