@@ -1480,10 +1480,27 @@ function updateLoginUI(){
   if(msAccount){ lbl.textContent='✓ '+(msAccount.name||msAccount.username); info.textContent='SharePoint › '+SP_PASTA; info.style.display='block'; }
   else{ lbl.textContent='🔑 Entrar com Microsoft'; info.style.display='none'; }
 }
+async function flushPendingSave(){
+  // dispara (ou aguarda) a gravação pendente terminar, sem esperar o debounce de 900ms
+  clearTimeout(_saveTimer);
+  if(!salvando) await salvarDados();
+  let tentativas=0;
+  while(salvando && tentativas<50){ await new Promise(res=>setTimeout(res,100)); tentativas++; }
+}
 document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
   if(!msalInstance){ toast('Autenticação ainda inicializando — aguarde e tente de novo.'); return; }
   if(msAccount){
-    if(confirm('Sair de '+msAccount.username+'?')){ try{ await msalInstance.logoutPopup({account:msAccount}); }catch(e){} msAccount=null; updateLoginUI(); applyAccess(); }
+    if(!confirm('Sair de '+msAccount.username+'?')) return;
+    if(dirtyReg.size || dirtyConfig.size){
+      toast('Sincronizando alterações antes de sair…');
+      await flushPendingSave();
+    }
+    if(dirtyReg.size || dirtyConfig.size){
+      if(!confirm('Não foi possível sincronizar todas as alterações agora (sem conexão?). Sair mesmo assim vai descartar essas alterações não salvas neste aparelho. Deseja continuar?')) return;
+      dirtyReg.clear(); dirtyConfig.clear();
+    }
+    try{ await msalInstance.logoutPopup({account:msAccount}); }catch(e){}
+    msAccount=null; updateLoginUI(); applyAccess();
     return;
   }
   try{
