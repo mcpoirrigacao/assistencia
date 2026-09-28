@@ -227,6 +227,15 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="block-title">Meta da Semana — todas as regiões <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-geral-meta-semana"></div>
 
+    <div class="block-title">Tempo de OS em Aberto <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— tempo corrido, sempre atualizado</span></div>
+    <div class="totals-strip" id="strip-geral-tempoaberto"></div>
+    <div class="card">
+      <h3>OS em Aberto — detalhe por Base</h3>
+      <div class="tablewrap"><table class="dt" id="tbl-geral-tempoaberto">
+        <thead><tr><th>Nº OS</th><th>Cliente</th><th>Região</th><th>Status</th><th>Data Abertura</th><th class="r">Dias em Aberto</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+
     <div class="card">
       <h3>Status da OS</h3>
       <div class="tablewrap"><table class="dt" id="tbl-geral-status">
@@ -878,6 +887,56 @@ function metaSemanaStripHtml(regiaoFiltro, refISO){
     tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
 }
 
+/* ---------- tempo de OS em aberto (dias corridos da Data de Abertura até hoje; tempo corrido, sempre atualizado) ---------- */
+function diasAbertaCalc(r){
+  const ab=(r.dataAbertura||'').trim(); if(!ab) return null;
+  const hoje=new Date(); const hojeSemHora=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate());
+  return Math.max(0, Math.round((hojeSemHora-D(ab))/86400000));
+}
+function osAbertasComTempo(){
+  const cfg=state.config;
+  return Object.values(state.registros)
+    .filter(r=>!cfg.statusFechados.includes(r.status))
+    .map(r=>({r, dias:diasAbertaCalc(r)}))
+    .filter(x=>x.dias!=null);
+}
+function tempoAbertoResumo(){
+  const lista=osAbertasComTempo();
+  if(!lista.length) return {qtd:0, maior:null, media:0};
+  let maior=lista[0], soma=0;
+  lista.forEach(x=>{ soma+=x.dias; if(x.dias>maior.dias) maior=x; });
+  return {qtd:lista.length, maior, media:soma/lista.length};
+}
+function tempoAbertoStripHtml(){
+  const {qtd,maior,media}=tempoAbertoResumo();
+  const subMaior = maior ? `OS nº ${escapeHtml(maior.r.numeroOS||'—')} • ${escapeHtml(maior.r.base||'sem base')}` : null;
+  return tbox('OS em Aberto', int(qtd)) +
+    tbox('Maior Tempo Aberta', maior ? `${int(maior.dias)} dias` : '—', subMaior, {accent:true}) +
+    tbox('Média de Tempo Aberta', qtd ? media.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' dias' : '—');
+}
+function tempoAbertoTabelaHtml(){
+  const cfg=state.config;
+  const lista=osAbertasComTempo();
+  const porBase={};
+  lista.forEach(x=>{ const b=x.r.base||'(sem base)'; (porBase[b]=porBase[b]||[]).push(x); });
+  const bases=cfg.bases.slice();
+  Object.keys(porBase).forEach(b=>{ if(!bases.includes(b)) bases.push(b); });
+  return bases.map(b=>{
+    const itens=(porBase[b]||[]).slice().sort((a,z)=>z.dias-a.dias);
+    let html=`<tr class="total-row"><td colspan="6">${escapeHtml(b)}</td></tr>`;
+    html += itens.length ? itens.map(x=>{
+      const dt=(x.r.dataAbertura||'').trim();
+      return `<tr><td>${escapeHtml(x.r.numeroOS||'—')}</td>` +
+        `<td class="cel-cliente" title="${escapeHtml(x.r.cliente||'')}">${escapeHtml(x.r.cliente||'(sem cliente)')}</td>` +
+        `<td><span class="reg ${regClass(x.r.regiao)}">${escapeHtml(x.r.regiao||'—')}</span></td>` +
+        `<td>${escapeHtml(x.r.status||'—')}</td>` +
+        `<td>${dt?`${ddmm(D(dt))}/${D(dt).getFullYear()}`:'—'}</td>` +
+        `<td class="num">${int(x.dias)}</td></tr>`;
+    }).join('') : `<tr><td colspan="6" style="color:var(--texto-suave)">Nenhuma OS em aberto nesta base.</td></tr>`;
+    return html;
+  }).join('') || `<tr><td colspan="6" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
+}
+
 /* =========================================================================
    RENDER — PAINEL GERAL
    ========================================================================= */
@@ -888,6 +947,8 @@ function renderPainel(){
   document.getElementById('strip-geral-kpi').innerHTML = kpiStripHtml(s);
   document.getElementById('strip-geral-meta-mes').innerHTML = metaMesStripHtml(null, ref);
   document.getElementById('strip-geral-meta-semana').innerHTML = metaSemanaStripHtml(null, ref);
+  document.getElementById('strip-geral-tempoaberto').innerHTML = tempoAbertoStripHtml();
+  document.querySelector('#tbl-geral-tempoaberto tbody').innerHTML = tempoAbertoTabelaHtml();
 
   document.querySelector('#tbl-geral-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-geral-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
@@ -1466,8 +1527,16 @@ async function initAuth(){
     msalInstance = new MsalClass(MSAL_CONFIG);
     await msalInstance.initialize();
     msalReady=true;
-    const accs=msalInstance.getAllAccounts();
-    if(accs.length){ msAccount=accs[0]; await sincronizarNuvem(true); }
+    // conclui um login por redirecionamento em andamento (fallback usado quando o popup é bloqueado)
+    try{
+      const redirResp = await msalInstance.handleRedirectPromise();
+      if(redirResp && redirResp.account) msAccount = redirResp.account;
+    }catch(e){ toast('Erro ao concluir login: '+(e.errorCode||e.message||'desconhecido')); }
+    if(!msAccount){
+      const accs=msalInstance.getAllAccounts();
+      if(accs.length) msAccount=accs[0];
+    }
+    if(msAccount) await sincronizarNuvem(true);
     updateLoginUI(); applyAccess();
   }catch(e){
     msalReady=false;
@@ -1510,9 +1579,16 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
     await sincronizarNuvem(true); applyAccess(); renderAll();
     toast('Logado como '+msAccount.username);
   }catch(e){
+    const popupBloqueado=(e.errorCode||'').includes('popup')||(e.message||'').toLowerCase().includes('popup');
+    if(popupBloqueado){
+      // navegador bloqueou o popup (comum em redes corporativas): continua o login na própria aba, sem depender de popup.
+      document.getElementById('ms-login-label').textContent='⏳ Redirecionando para o login...';
+      toast('Popup bloqueado — continuando o login nesta mesma aba…');
+      try{ await msalInstance.loginRedirect({scopes:GRAPH_SCOPES}); return; }
+      catch(e2){ document.getElementById('ms-login-label').textContent='🔑 Entrar com Microsoft'; toast('Não foi possível iniciar o login: '+(e2.errorCode||e2.message||'desconhecido')); return; }
+    }
     document.getElementById('ms-login-label').textContent='🔑 Entrar com Microsoft';
-    if((e.message||'').includes('popup')||e.errorCode==='popup_window_error') toast('Popup bloqueado — libere popups para este site.');
-    else if(e.errorCode==='user_cancelled') toast('Login cancelado.');
+    if(e.errorCode==='user_cancelled') toast('Login cancelado.');
     else toast('Erro no login: '+(e.errorCode||e.message||'desconhecido'));
   }
 });
