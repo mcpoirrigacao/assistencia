@@ -149,6 +149,9 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .os-card-field .v{font-size:.85rem;color:var(--texto);word-break:break-word;}
   .os-card-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:2px;}
 
+  .paginacao{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;}
+  .paginacao-info{font-size:.8rem;color:var(--texto-suave);}
+
   .reg{display:inline-block;font-size:.62rem;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
   .reg.R1{background:#e4f1e6;color:var(--azul-claro);}
   .reg.R2{background:#f3e6de;color:var(--ferrugem);}
@@ -396,6 +399,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     </div>
 
     <div class="os-card-list" id="lista-registros"></div>
+    <div class="paginacao" id="paginacao-registros"></div>
   </section>
 
   <!-- ============== PARÂMETROS ============== -->
@@ -1047,8 +1051,11 @@ document.getElementById('btn-reg-semana-next').addEventListener('click', ()=>mov
    RENDER — LANÇAMENTOS (grade de OS)
    ========================================================================= */
 function ordenarRegistros(){
+  const cfg=state.config;
   return Object.entries(state.registros).sort((a,b)=>{
     const ra=a[1], rb=b[1];
+    const aAberta=!cfg.statusFechados.includes(ra.status), bAberta=!cfg.statusFechados.includes(rb.status);
+    if(aAberta!==bAberta) return aAberta ? -1 : 1; // OS abertas sempre antes das fechadas
     if(ra.regiao!==rb.regiao) return (ra.regiao||'').localeCompare(rb.regiao||'');
     return String(ra.numeroOS||'').localeCompare(String(rb.numeroOS||''), 'pt-BR', {numeric:true});
   });
@@ -1096,11 +1103,12 @@ function aplicarFiltros(entries){
 }
 ['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento','f-base'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
-  el.addEventListener('input', renderRegistros); el.addEventListener('change', renderRegistros);
+  el.addEventListener('input', ()=>{ paginaAtual=1; renderRegistros(); });
+  el.addEventListener('change', ()=>{ paginaAtual=1; renderRegistros(); });
 });
 document.getElementById('btn-limpar-filtros').addEventListener('click', ()=>{
   ['f-busca','f-regiao','f-status','f-situacao','f-tecnico','f-departamento','f-base'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  renderRegistros();
+  paginaAtual=1; renderRegistros();
 });
 
 /* ---------- cards compactos e expansíveis (resumo no cabeçalho; detalhe completo ao clicar; edição via modal) ---------- */
@@ -1143,15 +1151,40 @@ function toggleOsCard(id){
   if(cardsAbertos.has(id)){ cardsAbertos.delete(id); el.classList.remove('open'); }
   else{ cardsAbertos.add(id); el.classList.add('open'); }
 }
+const ITENS_POR_PAGINA=30;
+let paginaAtual=1; // a busca e os filtros sempre atuam sobre a lista inteira, antes de paginar
+function paginacaoHtml(totalPaginas){
+  if(totalPaginas<=1) return '';
+  return `<div class="paginacao">
+    <button class="btn ghost small" id="btn-pag-prev" type="button" ${paginaAtual<=1?'disabled':''}>‹ Anterior</button>
+    <span class="paginacao-info">Página ${paginaAtual} de ${totalPaginas}</span>
+    <button class="btn ghost small" id="btn-pag-next" type="button" ${paginaAtual>=totalPaginas?'disabled':''}>Próxima ›</button>
+  </div>`;
+}
 function renderRegistros(){
   renderFiltrosSelects();
   const todos=ordenarRegistros();
-  const filtrados=aplicarFiltros(todos);
+  const filtrados=aplicarFiltros(todos); // filtro (inclusive a busca) roda sobre TODAS as OS, antes da paginação
+
+  const totalPaginas=Math.max(1, Math.ceil(filtrados.length/ITENS_POR_PAGINA));
+  if(paginaAtual>totalPaginas) paginaAtual=totalPaginas;
+  if(paginaAtual<1) paginaAtual=1;
+  const inicio=(paginaAtual-1)*ITENS_POR_PAGINA;
+  const pagina=filtrados.slice(inicio, inicio+ITENS_POR_PAGINA);
+
   const cont=document.getElementById('lista-registros');
-  cont.innerHTML = filtrados.map(([id,r])=>osCardHtml(id,r)).join('')
+  cont.innerHTML = pagina.map(([id,r])=>osCardHtml(id,r)).join('')
     || `<div style="text-align:center;color:var(--texto-suave);padding:22px;">Nenhuma OS encontrada com os filtros atuais.</div>`;
   cont.querySelectorAll('[data-toggle-os]').forEach(el=>el.addEventListener('click', ()=>toggleOsCard(el.dataset.toggleOs)));
   cont.querySelectorAll('[data-edit-os]').forEach(b=>b.addEventListener('click', (ev)=>{ ev.stopPropagation(); abrirEdicaoOS(b.dataset.editOs); }));
+
+  const pagCont=document.getElementById('paginacao-registros');
+  if(pagCont){
+    pagCont.innerHTML = paginacaoHtml(totalPaginas);
+    const bPrev=document.getElementById('btn-pag-prev'), bNext=document.getElementById('btn-pag-next');
+    if(bPrev) bPrev.addEventListener('click', ()=>{ paginaAtual--; renderRegistros(); cont.scrollIntoView({behavior:'smooth', block:'start'}); });
+    if(bNext) bNext.addEventListener('click', ()=>{ paginaAtual++; renderRegistros(); cont.scrollIntoView({behavior:'smooth', block:'start'}); });
+  }
 
   let horasF=0, valorF=0;
   filtrados.forEach(([,r])=>{ horasF+=n(r.horas); valorF+=n(r.valor); });
