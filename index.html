@@ -148,6 +148,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .os-card-field .k{font-size:.64rem;text-transform:uppercase;letter-spacing:.4px;color:var(--texto-suave);}
   .os-card-field .v{font-size:.85rem;color:var(--texto);word-break:break-word;}
   .os-card-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:2px;}
+  .os-card-body-inner.base-detail{display:block;}
 
   .paginacao{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;}
   .paginacao-info{font-size:.8rem;color:var(--texto-suave);}
@@ -251,10 +252,8 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="block-title">Tempo de OS em Aberto <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— tempo corrido, sempre atualizado</span></div>
     <div class="totals-strip" id="strip-geral-tempoaberto"></div>
     <div class="card">
-      <h3>OS em Aberto — detalhe por Base</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-geral-tempoaberto">
-        <thead><tr><th>Nº OS</th><th>Cliente</th><th>Região</th><th>Status</th><th>Data Abertura</th><th class="r">Dias em Aberto</th></tr></thead><tbody></tbody>
-      </table></div>
+      <h3>OS em Aberto — detalhe por Base <span class="h3-side">clique numa base para ver as OS</span></h3>
+      <div class="os-card-list" id="lista-tempoaberto"></div>
     </div>
 
     <div class="card">
@@ -926,27 +925,51 @@ function tempoAbertoStripHtml(){
     tbox('Maior Tempo Aberta', maior ? `${int(maior.dias)} dias` : '—', subMaior, {accent:true}) +
     tbox('Média de Tempo Aberta', qtd ? media.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' dias' : '—');
 }
-function tempoAbertoTabelaHtml(){
+const baseCardsAbertos=new Set(); // bases com o card expandido — preservado entre re-renders
+function tempoAbertoCardsHtml(){
   const cfg=state.config;
   const lista=osAbertasComTempo();
   const porBase={};
   lista.forEach(x=>{ const b=x.r.base||'(sem base)'; (porBase[b]=porBase[b]||[]).push(x); });
   const bases=cfg.bases.slice();
   Object.keys(porBase).forEach(b=>{ if(!bases.includes(b)) bases.push(b); });
+
   return bases.map(b=>{
     const itens=(porBase[b]||[]).slice().sort((a,z)=>z.dias-a.dias);
-    let html=`<tr class="total-row"><td colspan="6">${escapeHtml(b)}</td></tr>`;
-    html += itens.length ? itens.map(x=>{
-      const dt=(x.r.dataAbertura||'').trim();
-      return `<tr><td>${escapeHtml(x.r.numeroOS||'—')}</td>` +
-        `<td class="cel-cliente" title="${escapeHtml(x.r.cliente||'')}">${escapeHtml(x.r.cliente||'(sem cliente)')}</td>` +
-        `<td><span class="reg ${regClass(x.r.regiao)}">${escapeHtml(x.r.regiao||'—')}</span></td>` +
-        `<td>${escapeHtml(x.r.status||'—')}</td>` +
-        `<td>${dt?`${ddmm(D(dt))}/${D(dt).getFullYear()}`:'—'}</td>` +
-        `<td class="num">${int(x.dias)}</td></tr>`;
-    }).join('') : `<tr><td colspan="6" style="color:var(--texto-suave)">Nenhuma OS em aberto nesta base.</td></tr>`;
-    return html;
-  }).join('') || `<tr><td colspan="6" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
+    const qtd=itens.length, maior=itens[0];
+    const aberto=baseCardsAbertos.has(b);
+    const resumoTxt = qtd ? `${int(qtd)} OS aberta${qtd>1?'s':''} · mais antiga: ${int(maior.dias)} dias` : 'Nenhuma OS em aberto';
+    const corpo = qtd ? `<div class="tablewrap"><table class="dt">
+        <thead><tr><th>Nº OS</th><th>Cliente</th><th>Região</th><th>Status</th><th>Data Abertura</th><th class="r">Dias em Aberto</th></tr></thead>
+        <tbody>${itens.map(x=>{
+          const dt=(x.r.dataAbertura||'').trim();
+          return `<tr><td>${escapeHtml(x.r.numeroOS||'—')}</td>` +
+            `<td class="cel-cliente" title="${escapeHtml(x.r.cliente||'')}">${escapeHtml(x.r.cliente||'(sem cliente)')}</td>` +
+            `<td><span class="reg ${regClass(x.r.regiao)}">${escapeHtml(x.r.regiao||'—')}</span></td>` +
+            `<td>${escapeHtml(x.r.status||'—')}</td>` +
+            `<td>${dt?`${ddmm(D(dt))}/${D(dt).getFullYear()}`:'—'}</td>` +
+            `<td class="num">${int(x.dias)}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>` : `<div style="padding:2px;color:var(--texto-suave);font-size:.85rem;">Nenhuma OS em aberto nesta base.</div>`;
+
+    return `<div class="os-card base-card${aberto?' open':''}" data-base-card="${escapeHtml(b)}">
+      <div class="os-card-head" data-toggle-base="${escapeHtml(b)}">
+        <span class="chev">▶</span>
+        <span class="cliente" style="flex:0 1 auto;font-weight:700;color:var(--azul-escuro);">${escapeHtml(b)}</span>
+        <span class="cliente" title="${escapeHtml(resumoTxt)}">${escapeHtml(resumoTxt)}</span>
+        ${qtd ? `<span class="valor" style="color:var(--ferrugem);">${int(maior.dias)} dias</span>` : ''}
+      </div>
+      <div class="os-card-body">
+        <div class="os-card-body-inner base-detail">${corpo}</div>
+      </div>
+    </div>`;
+  }).join('') || `<div style="text-align:center;color:var(--texto-suave);padding:22px;">Sem dados.</div>`;
+}
+function toggleBaseCard(b){
+  const el=document.querySelector(`.os-card[data-base-card="${CSS.escape(b)}"]`);
+  if(!el) return;
+  if(baseCardsAbertos.has(b)){ baseCardsAbertos.delete(b); el.classList.remove('open'); }
+  else{ baseCardsAbertos.add(b); el.classList.add('open'); }
 }
 
 /* =========================================================================
@@ -960,7 +983,9 @@ function renderPainel(){
   document.getElementById('strip-geral-meta-mes').innerHTML = metaMesStripHtml(null, ref);
   document.getElementById('strip-geral-meta-semana').innerHTML = metaSemanaStripHtml(null, ref);
   document.getElementById('strip-geral-tempoaberto').innerHTML = tempoAbertoStripHtml();
-  document.querySelector('#tbl-geral-tempoaberto tbody').innerHTML = tempoAbertoTabelaHtml();
+  const listaTempoAberto=document.getElementById('lista-tempoaberto');
+  listaTempoAberto.innerHTML = tempoAbertoCardsHtml();
+  listaTempoAberto.querySelectorAll('[data-toggle-base]').forEach(el=>el.addEventListener('click', ()=>toggleBaseCard(el.dataset.toggleBase)));
 
   document.querySelector('#tbl-geral-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-geral-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
