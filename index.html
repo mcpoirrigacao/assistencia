@@ -163,6 +163,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .sit.fat{background:#e4f1e6;color:var(--azul-claro);}
   .sit.pen{background:#fbeee6;color:var(--ferrugem);}
   .sit.na{background:var(--areia-escura);color:var(--texto-suave);}
+  .sit.and{background:#e3edf7;color:#2f6690;}
 
   .btn{border:none;border-radius:5px;padding:9px 16px;font-size:.85rem;font-weight:700;cursor:pointer;letter-spacing:.2px;transition:transform .08s, filter .12s;}
   .btn:active{transform:scale(.97);}
@@ -312,7 +313,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <span id="reg-semana-range" style="font-size:.84rem;font-weight:700;color:var(--azul-escuro);"></span>
       <button class="btn ghost small" id="btn-reg-semana-next" type="button">Semana seguinte ▶</button>
     </div>
-    <div class="note">"OS em Aberto" e "Pendente de Faturar" trazem OS de qualquer época (inclusive de semanas anteriores) que ainda estão em andamento/pausadas ou que ainda não foram faturadas — não dependem da semana acima. Só "Faturado na Semana" usa a semana selecionada; navegue com os botões ou pelo campo "Data de referência" no topo da página. Em Parâmetros → Status da OS você define quais status contam como "concluído".</div>
+    <div class="note">"OS em Aberto" traz, de qualquer época (inclusive semanas anteriores), toda OS cujo status não está marcado como "Conclui a OS" em Parâmetros. "Pendente de Faturar" só conta OS já fechadas (concluídas) que ainda não têm Data do Faturamento — OS pausada ou em andamento não entra nessa conta. Nenhum dos dois depende da semana acima. Só "Faturado na Semana" usa a semana selecionada; navegue com os botões ou pelo campo "Data de referência" no topo da página.</div>
     <div class="totals-strip" id="strip-reg-corrente-kpi"></div>
 
     <div class="card">
@@ -509,7 +510,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <div class="field"><label>Rótulo "Não se aplica"</label><input type="text" id="p-sit-na"></div>
         <div class="field"><label>Texto em "Forma de Pgto" que marca "não se aplica"</label><input type="text" id="p-chave-interna"></div>
       </div>
-      <div class="note">Situação = rótulo "Não se aplica" quando a Forma de Pagamento contém o texto acima (ex.: uso interno / baixa interna). Caso contrário: "Faturado" quando NFS-e e Data do Faturamento estiverem preenchidos; senão "Pendente".</div>
+      <div class="note">Situação = rótulo "Não se aplica" quando a Forma de Pagamento contém o texto acima (ex.: uso interno / baixa interna). Caso contrário: "Faturado" quando NFS-e e Data do Faturamento estiverem preenchidos; se a OS ainda não está fechada (status que não "Conclui a OS"), mostra "Em Andamento"; só vira "Pendente" quando a OS já está fechada e ainda falta a Data do Faturamento.</div>
     </div>
 
     <div class="card somente-admin">
@@ -670,19 +671,22 @@ function clone(o){ return JSON.parse(JSON.stringify(o)); }
 function uid(){ return 'os_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ---------- domínio: situação de faturamento (calculada) ---------- */
+const SITUACAO_EM_ANDAMENTO='Em Andamento'; // OS ainda aberta (qualquer status que não "conclui a OS"): nunca conta como Pendente de Faturar
 function computeSituacao(r){
   const cfg=state.config;
   const chave=(cfg.chaveBaixaInterna||'').trim().toUpperCase();
   const fp=(r.formaPagamento||'').toUpperCase();
   if(chave && fp.includes(chave)) return cfg.situacoes.naoAplica;
   if((r.nfse||'').trim() && (r.dataFaturamento||'').trim()) return cfg.situacoes.faturado;
+  if(!cfg.statusFechados.includes(r.status)) return SITUACAO_EM_ANDAMENTO; // pausada/em andamento/etc.: só vira "Pendente" depois de a OS ser fechada
   return cfg.situacoes.pendente;
 }
 function sitClass(label){
   const cfg=state.config;
   if(label===cfg.situacoes.faturado) return 'fat';
   if(label===cfg.situacoes.naoAplica) return 'na';
-  return 'pen';
+  if(label===cfg.situacoes.pendente) return 'pen';
+  return 'and';
 }
 function regClass(nome){
   const i=state.config.regioes.indexOf(nome);
@@ -710,7 +714,7 @@ function statsFor(filterFn){
   cfg.tecnicos.forEach(x=>s.porTecnico[x]=0);
   cfg.bases.forEach(x=>s.porBase[x]={qtd:0, horas:0, valor:0});
   cfg.departamentos.forEach(x=>s.porDepartamento[x]={qtd:0, horas:0, valor:0});
-  [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica].forEach(x=>s.porSituacao[x]=0);
+  [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica,SITUACAO_EM_ANDAMENTO].forEach(x=>s.porSituacao[x]=0);
 
   Object.values(state.registros).forEach(r=>{
     if(filterFn && !filterFn(r)) return;
@@ -718,7 +722,8 @@ function statsFor(filterFn){
     const sit=computeSituacao(r);
     if(sit===cfg.situacoes.faturado) s.valorFaturado+=n(r.valor);
     else if(sit===cfg.situacoes.pendente) s.valorPendente+=n(r.valor);
-    else s.valorNaoAplica+=n(r.valor);
+    else if(sit===cfg.situacoes.naoAplica) s.valorNaoAplica+=n(r.valor);
+    // SITUACAO_EM_ANDAMENTO: OS ainda aberta, não soma em Faturado/Pendente/Não se aplica
     s.porStatus[r.status]=(s.porStatus[r.status]||0)+1;
     s.porTipo[r.tipo]=(s.porTipo[r.tipo]||0)+n(r.valor);
     s.porSituacao[sit]=(s.porSituacao[sit]||0)+n(r.valor);
@@ -989,7 +994,7 @@ function renderPainel(){
 
   document.querySelector('#tbl-geral-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-geral-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
-  document.querySelector('#tbl-geral-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
+  document.querySelector('#tbl-geral-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica,SITUACAO_EM_ANDAMENTO], brl);
   document.querySelector('#tbl-geral-regiao tbody').innerHTML = tableRows(s.porRegiao, cfg.regioes, brl);
 
   document.querySelector('#tbl-geral-metaregiao tbody').innerHTML = cfg.regioes.map(r=>{
@@ -1041,12 +1046,13 @@ function renderRegionalAtivo(){
   document.getElementById('strip-reg-meta-semana').innerHTML = metaSemanaStripHtml(nome, ref);
   document.querySelector('#tbl-reg-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-reg-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
-  document.querySelector('#tbl-reg-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], brl);
+  document.querySelector('#tbl-reg-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica,SITUACAO_EM_ANDAMENTO], brl);
   document.querySelector('#tbl-reg-tecnico tbody').innerHTML = tableRows(s.porTecnico, cfg.tecnicos, horasFmt);
 
   /* Andamento Corrente — visão unificada e "tempo corrido" (não depende da semana):
      - "OS em Aberto" = status que NÃO está marcado como "conclui a OS" em Parâmetros (qualquer época).
-     - "Pendente de Faturar" = Situação calculada = Pendente (qualquer época, mesmo OS já fechada).
+     - "Pendente de Faturar" = Situação calculada = Pendente, que só existe para OS já fechada e sem
+       Data do Faturamento — OS pausada/em andamento vira "Em Andamento" e nunca entra aqui.
      Só "Faturado na Semana" usa a semana de referência (mesma base do "Realizado" da Meta da Semana). */
   const [wA,wB]=weekBounds(ref);
   document.getElementById('reg-semana-range').textContent = `${ddmm(D(wA))} a ${ddmm(D(wB))} de ${D(wB).getFullYear()}`;
@@ -1105,7 +1111,7 @@ function renderFiltrosSelects(){
   const cfg=state.config;
   fillFilterSelect('f-regiao', cfg.regioes, 'Todas as regiões');
   fillFilterSelect('f-status', cfg.statusOS, 'Todos os status');
-  fillFilterSelect('f-situacao', [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica], 'Todas as situações');
+  fillFilterSelect('f-situacao', [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica,SITUACAO_EM_ANDAMENTO], 'Todas as situações');
   fillFilterSelect('f-tecnico', cfg.tecnicos, 'Todos os técnicos');
   fillFilterSelect('f-departamento', cfg.departamentos, 'Todos os departamentos');
   fillFilterSelect('f-base', cfg.bases, 'Todas as bases');
