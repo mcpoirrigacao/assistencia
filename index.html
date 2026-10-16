@@ -256,6 +256,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <h3>OS em Aberto — detalhe por Base <span class="h3-side">clique numa base para ver as OS</span></h3>
       <div class="os-card-list" id="lista-tempoaberto"></div>
     </div>
+    <div class="card">
+      <h3>OS em Aberto — detalhe por Regional <span class="h3-side">clique numa região para ver as OS</span></h3>
+      <div class="os-card-list" id="lista-tempoaberto-regiao"></div>
+    </div>
 
     <div class="card">
       <h3>Status da OS</h3>
@@ -976,6 +980,53 @@ function toggleBaseCard(b){
   if(baseCardsAbertos.has(b)){ baseCardsAbertos.delete(b); el.classList.remove('open'); }
   else{ baseCardsAbertos.add(b); el.classList.add('open'); }
 }
+const regiaoCardsAbertos=new Set(); // regiões com o card expandido — preservado entre re-renders
+function tempoAbertoCardsPorRegiaoHtml(){
+  const cfg=state.config;
+  const lista=osAbertasComTempo();
+  const porRegiao={};
+  lista.forEach(x=>{ const g=x.r.regiao||'(sem região)'; (porRegiao[g]=porRegiao[g]||[]).push(x); });
+  const regioes=cfg.regioes.slice();
+  Object.keys(porRegiao).forEach(g=>{ if(!regioes.includes(g)) regioes.push(g); });
+
+  return regioes.map(g=>{
+    const itens=(porRegiao[g]||[]).slice().sort((a,z)=>z.dias-a.dias);
+    const qtd=itens.length, maior=itens[0];
+    const media=qtd ? itens.reduce((acc,x)=>acc+x.dias,0)/qtd : 0;
+    const aberto=regiaoCardsAbertos.has(g);
+    const resumoTxt = qtd ? `${int(qtd)} OS aberta${qtd>1?'s':''} · maior: ${int(maior.dias)} dias · média: ${media.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} dias` : 'Nenhuma OS em aberto';
+    const corpo = qtd ? `<div class="tablewrap"><table class="dt">
+        <thead><tr><th>Nº OS</th><th>Cliente</th><th>Base</th><th>Status</th><th>Data Abertura</th><th class="r">Dias em Aberto</th></tr></thead>
+        <tbody>${itens.map(x=>{
+          const dt=(x.r.dataAbertura||'').trim();
+          return `<tr><td>${escapeHtml(x.r.numeroOS||'—')}</td>` +
+            `<td class="cel-cliente" title="${escapeHtml(x.r.cliente||'')}">${escapeHtml(x.r.cliente||'(sem cliente)')}</td>` +
+            `<td>${escapeHtml(x.r.base||'—')}</td>` +
+            `<td>${escapeHtml(x.r.status||'—')}</td>` +
+            `<td>${dt?`${ddmm(D(dt))}/${D(dt).getFullYear()}`:'—'}</td>` +
+            `<td class="num">${int(x.dias)}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>` : `<div style="padding:2px;color:var(--texto-suave);font-size:.85rem;">Nenhuma OS em aberto nesta região.</div>`;
+
+    return `<div class="os-card regiao-card${aberto?' open':''}" data-regiao-card="${escapeHtml(g)}">
+      <div class="os-card-head" data-toggle-regiao="${escapeHtml(g)}">
+        <span class="chev">▶</span>
+        <span class="reg ${regClass(g)}" style="flex:0 0 auto;">${escapeHtml(g)}</span>
+        <span class="cliente" title="${escapeHtml(resumoTxt)}">${escapeHtml(resumoTxt)}</span>
+        ${qtd ? `<span class="valor" style="color:var(--ferrugem);">${int(maior.dias)} dias</span>` : ''}
+      </div>
+      <div class="os-card-body">
+        <div class="os-card-body-inner base-detail">${corpo}</div>
+      </div>
+    </div>`;
+  }).join('') || `<div style="text-align:center;color:var(--texto-suave);padding:22px;">Sem dados.</div>`;
+}
+function toggleRegiaoCard(g){
+  const el=document.querySelector(`.os-card[data-regiao-card="${CSS.escape(g)}"]`);
+  if(!el) return;
+  if(regiaoCardsAbertos.has(g)){ regiaoCardsAbertos.delete(g); el.classList.remove('open'); }
+  else{ regiaoCardsAbertos.add(g); el.classList.add('open'); }
+}
 
 /* =========================================================================
    RENDER — PAINEL GERAL
@@ -991,6 +1042,9 @@ function renderPainel(){
   const listaTempoAberto=document.getElementById('lista-tempoaberto');
   listaTempoAberto.innerHTML = tempoAbertoCardsHtml();
   listaTempoAberto.querySelectorAll('[data-toggle-base]').forEach(el=>el.addEventListener('click', ()=>toggleBaseCard(el.dataset.toggleBase)));
+  const listaTempoAbertoRegiao=document.getElementById('lista-tempoaberto-regiao');
+  listaTempoAbertoRegiao.innerHTML = tempoAbertoCardsPorRegiaoHtml();
+  listaTempoAbertoRegiao.querySelectorAll('[data-toggle-regiao]').forEach(el=>el.addEventListener('click', ()=>toggleRegiaoCard(el.dataset.toggleRegiao)));
 
   document.querySelector('#tbl-geral-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-geral-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
