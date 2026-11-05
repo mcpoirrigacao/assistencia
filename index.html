@@ -351,6 +351,11 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="block-title">Meta da Semana <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-reg-meta-semana"></div>
 
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Meta Mês a Mês</span> <span class="h3-side">visão resumida do Período da Meta — <span class="fonte-tag fonte-hist">H</span> histórico informado em Parâmetros, <span class="fonte-tag fonte-os">OS</span> calculado pelas OS faturadas</span></h3>
+      <div class="card-collapsible-body"><div id="resumo-meta-mensal-regional"></div></div>
+    </div>
+
     <div class="block-title">Andamento Corrente do Departamento <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— tempo corrido, sempre atualizado</span></div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
       <button class="btn ghost small" id="btn-reg-semana-prev" type="button">◀ Semana anterior</button>
@@ -360,55 +365,55 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="note">"OS em Aberto" traz, de qualquer época (inclusive semanas anteriores), toda OS cujo status não está marcado como "Conclui a OS" em Parâmetros. "Pendente de Faturar" só conta OS já fechadas (concluídas) que ainda não têm Data do Faturamento — OS pausada ou em andamento não entra nessa conta. Nenhum dos dois depende da semana acima. Só "Faturado na Semana" usa a semana selecionada; navegue com os botões ou pelo campo "Data de referência" no topo da página.</div>
     <div class="totals-strip" id="strip-reg-corrente-kpi"></div>
 
-    <div class="card">
-      <h3>OS em Aberto <span class="h3-side">por status — tempo corrido</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-aberto-status">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>OS em Aberto</span> <span class="h3-side">por status — tempo corrido</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-aberto-status">
         <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>OS em Aberto <span class="h3-side">por base — tempo corrido</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-aberto-base">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>OS em Aberto</span> <span class="h3-side">por base — tempo corrido</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-aberto-base">
         <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>OS em Aberto <span class="h3-side">por departamento — tempo corrido</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-aberto-departamento">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>OS em Aberto</span> <span class="h3-side">por departamento — tempo corrido</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-aberto-departamento">
         <thead><tr><th>Departamento</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Pendente de Faturar <span class="h3-side">por base — tempo corrido</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-pendfat-base">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Pendente de Faturar</span> <span class="h3-side">por base — tempo corrido</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-pendfat-base">
         <thead><tr><th>Base</th><th class="r">Qtd. de OS</th><th class="r">Horas</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
 
     <div class="block-title">Acumulado (todo o período lançado)</div>
-    <div class="card">
-      <h3>Status da OS <span class="h3-side">acumulado</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-status">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Status da OS</span> <span class="h3-side">acumulado</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-status">
         <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Tipo de OS <span class="h3-side">acumulado</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-tipo">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Tipo de OS</span> <span class="h3-side">acumulado</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-tipo">
         <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Situação de Faturamento <span class="h3-side">acumulado</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-situacao">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Situação de Faturamento</span> <span class="h3-side">acumulado</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-situacao">
         <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Técnico(s) — Horas <span class="h3-side">acumulado</span></h3>
-      <div class="tablewrap"><table class="dt" id="tbl-reg-tecnico">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Técnico(s) — Horas</span> <span class="h3-side">acumulado</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-reg-tecnico">
         <thead><tr><th>Técnico</th><th class="r">Horas</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
   </section>
 
@@ -1094,10 +1099,15 @@ function toggleBaseCard(b){
   else{ baseCardsAbertos.add(b); el.classList.add('open'); }
 }
 const regiaoCardsAbertos=new Set(); // regiões com o card expandido — preservado entre re-renders
-let resumoMensalAberto=false; // card "Faturamento Mensal por Regional" — fechado por padrão, preservado entre re-renders
-function aplicarResumoMensalAberto(){
-  const el=document.getElementById('card-resumo-mensal'); if(!el) return;
-  el.classList.toggle('open', resumoMensalAberto);
+/* cards expansíveis por clique no título (fechados por padrão): basta marcar o wrapper com class="card collapsible"
+   e o <h3> com class="card-toggle". O card/h3 são HTML estático (nunca recriados pelo render), então a classe
+   "open" aplicada por clique persiste sozinha entre re-renders — não precisa reaplicar em cada render(). */
+function initCardsColapsaveis(){
+  document.querySelectorAll('.card.collapsible > h3.card-toggle').forEach(h=>{
+    if(h.dataset.collapseWired) return; // evita duplicar listener se chamado mais de uma vez
+    h.dataset.collapseWired='1';
+    h.addEventListener('click', ()=>{ h.closest('.card').classList.toggle('open'); });
+  });
 }
 function tempoAbertoCardsPorRegiaoHtml(){
   const cfg=state.config;
@@ -1223,6 +1233,34 @@ function resumoMensalHtml(){
   const linhaTotal=`<tr style="font-weight:700;border-top:2px solid var(--areia-escura);"><td>Total</td>${cfg.regioes.map(r=>`<td class="num">${brl0(totais[r])}</td>`).join('')}</tr>`;
   return `<div class="tablewrap"><table class="dt"><thead><tr><th>Mês</th>${cfg.regioes.map(r=>`<th class="r">${escapeHtml(r)}</th>`).join('')}</tr></thead><tbody>${linhas}${linhaTotal}</tbody></table></div>`;
 }
+/* meta "linha de base" de um mês específico = (dias úteis do mês ÷ dias úteis totais do período) × meta total do período.
+   Distribuição linear fixa (não redistribui pelo saldo como a Meta do Mês "ao vivo", que é ancorada em hoje) —
+   usada só no resumo mês a mês, para dar um alvo estável por mês ao longo do ano. */
+function metaMesBase(regiaoFiltro, m){
+  const diasTotais=diasUteisPeriodo();
+  if(diasTotais<=0) return 0;
+  const diasMes=diasUteisRange(m.mA, m.mB);
+  return metaTotalPeriodo(regiaoFiltro)*(diasMes/diasTotais);
+}
+/* resumo mês a mês de Meta × Realizado (histórico ou OS) para uma região específica — view somente leitura na aba Regional */
+function resumoMetaMensalRegionalHtml(regiao){
+  if(!periodoValido()) return `<div class="sugestoes-ok">Configure o Período da Meta em Parâmetros para ver o resumo mensal.</div>`;
+  const meses=mesesDoPeriodo();
+  if(!meses.length) return `<div class="sugestoes-ok">Nenhum mês no Período da Meta configurado.</div>`;
+  let totalMeta=0, totalReal=0;
+  const linhas=meses.map(m=>{
+    const meta=metaMesBase(regiao, m);
+    const hist=valorHistoricoMes(regiao, m.ym);
+    const real = hist!=null ? hist : somaFaturadoPeriodoOS(m.mA, m.mB, regiao);
+    const origem = hist!=null ? 'hist' : 'os';
+    totalMeta+=meta; totalReal+=real;
+    const p = meta>0 ? real/meta : null;
+    return `<tr><td>${escapeHtml(m.label)}</td><td class="num">${brl0(meta)}</td><td class="num">${brl0(real)} <span class="fonte-tag fonte-${origem}">${origem==='hist'?'H':'OS'}</span></td><td class="num">${pct(p)}</td></tr>`;
+  }).join('');
+  const pTotal = totalMeta>0 ? totalReal/totalMeta : null;
+  const linhaTotal=`<tr style="font-weight:700;border-top:2px solid var(--areia-escura);"><td>Total</td><td class="num">${brl0(totalMeta)}</td><td class="num">${brl0(totalReal)}</td><td class="num">${pct(pTotal)}</td></tr>`;
+  return `<div class="tablewrap"><table class="dt"><thead><tr><th>Mês</th><th class="r">Meta do Mês (R$)</th><th class="r">Realizado (R$)</th><th class="r">% Atingido</th></tr></thead><tbody>${linhas}${linhaTotal}</tbody></table></div>`;
+}
 function sugestoesHtml(){
   const alertas=gerarSugestoes();
   if(!alertas.length){
@@ -1244,7 +1282,6 @@ function renderPainel(){
   document.getElementById('strip-geral-kpi').innerHTML = kpiStripHtml(s);
   document.getElementById('strip-geral-meta-periodo').innerHTML = metaPeriodoStripHtml(null);
   document.getElementById('resumo-mensal-regional').innerHTML = resumoMensalHtml();
-  aplicarResumoMensalAberto();
   document.getElementById('strip-geral-meta-mes').innerHTML = metaMesStripHtml(null, ref);
   document.getElementById('strip-geral-meta-semana').innerHTML = metaSemanaStripHtml(null, ref);
   document.getElementById('strip-geral-tempoaberto').innerHTML = tempoAbertoStripHtml();
@@ -1294,6 +1331,7 @@ function renderRegionalAtivo(){
     : 'Nenhuma região cadastrada — adicione uma na aba Parâmetros.';
   if(!nome){
     ['strip-reg-kpi','strip-reg-meta-mes','strip-reg-meta-semana','strip-reg-corrente-kpi'].forEach(id=>document.getElementById(id).innerHTML='');
+    document.getElementById('resumo-meta-mensal-regional').innerHTML='';
     document.getElementById('reg-semana-range').textContent='';
     ['tbl-reg-status','tbl-reg-tipo','tbl-reg-situacao','tbl-reg-tecnico','tbl-reg-aberto-status'].forEach(id=>{
       document.querySelector('#'+id+' tbody').innerHTML=`<tr><td colspan="2" style="color:var(--texto-suave)">Sem dados.</td></tr>`;
@@ -1307,6 +1345,7 @@ function renderRegionalAtivo(){
   document.getElementById('strip-reg-kpi').innerHTML = kpiStripHtml(s);
   document.getElementById('strip-reg-meta-mes').innerHTML = metaMesStripHtml(nome, ref);
   document.getElementById('strip-reg-meta-semana').innerHTML = metaSemanaStripHtml(nome, ref);
+  document.getElementById('resumo-meta-mensal-regional').innerHTML = resumoMetaMensalRegionalHtml(nome);
   document.querySelector('#tbl-reg-status tbody').innerHTML = tableRows(s.porStatus, cfg.statusOS, int);
   document.querySelector('#tbl-reg-tipo tbody').innerHTML = tableRows(s.porTipo, cfg.tiposOS, brl);
   document.querySelector('#tbl-reg-situacao tbody').innerHTML = tableRows(s.porSituacao, [cfg.situacoes.faturado,cfg.situacoes.pendente,cfg.situacoes.naoAplica,SITUACAO_EM_ANDAMENTO], brl);
@@ -1798,7 +1837,7 @@ function renderAll(){
   if(document.getElementById('pane-parametros').classList.contains('active')) renderParametros();
 }
 document.getElementById('ref-data').addEventListener('change', ()=>{ renderPainel(); renderRegionalAtivo(); });
-document.getElementById('head-resumo-mensal').addEventListener('click', ()=>{ resumoMensalAberto=!resumoMensalAberto; aplicarResumoMensalAberto(); });
+initCardsColapsaveis();
 document.getElementById('tabs').addEventListener('click', e=>{
   const btn=e.target.closest('button[data-tab]'); if(!btn) return;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
