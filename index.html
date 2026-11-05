@@ -106,6 +106,14 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .fonte-hist{background:#e3edf7;color:#2f6690;}
   .fonte-os{background:var(--areia-escura);color:var(--texto-suave);}
 
+  .card.collapsible h3.card-toggle{cursor:pointer;user-select:none;}
+  .card.collapsible h3.card-toggle:hover{color:var(--azul-escuro);}
+  .card.collapsible .chev{display:inline-block;color:var(--texto-suave);font-size:.7rem;transition:transform .15s;margin-right:6px;}
+  .card.collapsible.open .chev{transform:rotate(90deg);}
+  .card.collapsible:not(.open) h3.card-toggle{margin-bottom:0;border-bottom:none;padding-bottom:0;}
+  .card-collapsible-body{max-height:0;overflow:hidden;transition:max-height .2s ease;}
+  .card.collapsible.open .card-collapsible-body{max-height:3000px;}
+
   .totals-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:4px;margin-bottom:16px;}
   @media (max-width:900px){ .totals-strip{grid-template-columns:repeat(2,minmax(0,1fr));} }
   @media (max-width:520px){ .totals-strip{grid-template-columns:1fr;} }
@@ -271,9 +279,9 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     <div class="block-title">Meta Geral do Período — todas as regiões <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— período completo configurado em Parâmetros</span></div>
     <div class="totals-strip" id="strip-geral-meta-periodo"></div>
 
-    <div class="card">
-      <h3>Faturamento Mensal por Regional <span class="h3-side">mês a mês, no Período da Meta — <span class="fonte-tag fonte-hist">H</span> histórico informado em Parâmetros, <span class="fonte-tag fonte-os">OS</span> calculado pelas OS faturadas</span></h3>
-      <div id="resumo-mensal-regional"></div>
+    <div class="card collapsible" id="card-resumo-mensal">
+      <h3 class="card-toggle" id="head-resumo-mensal"><span><span class="chev">▸</span>Faturamento Mensal por Regional</span> <span class="h3-side">mês a mês, no Período da Meta — <span class="fonte-tag fonte-hist">H</span> histórico informado em Parâmetros, <span class="fonte-tag fonte-os">OS</span> calculado pelas OS faturadas</span></h3>
+      <div class="card-collapsible-body"><div id="resumo-mensal-regional"></div></div>
     </div>
 
     <div class="block-title">Meta do Mês — todas as regiões <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
@@ -1086,6 +1094,11 @@ function toggleBaseCard(b){
   else{ baseCardsAbertos.add(b); el.classList.add('open'); }
 }
 const regiaoCardsAbertos=new Set(); // regiões com o card expandido — preservado entre re-renders
+let resumoMensalAberto=false; // card "Faturamento Mensal por Regional" — fechado por padrão, preservado entre re-renders
+function aplicarResumoMensalAberto(){
+  const el=document.getElementById('card-resumo-mensal'); if(!el) return;
+  el.classList.toggle('open', resumoMensalAberto);
+}
 function tempoAbertoCardsPorRegiaoHtml(){
   const cfg=state.config;
   const lista=osAbertasComTempo();
@@ -1231,6 +1244,7 @@ function renderPainel(){
   document.getElementById('strip-geral-kpi').innerHTML = kpiStripHtml(s);
   document.getElementById('strip-geral-meta-periodo').innerHTML = metaPeriodoStripHtml(null);
   document.getElementById('resumo-mensal-regional').innerHTML = resumoMensalHtml();
+  aplicarResumoMensalAberto();
   document.getElementById('strip-geral-meta-mes').innerHTML = metaMesStripHtml(null, ref);
   document.getElementById('strip-geral-meta-semana').innerHTML = metaSemanaStripHtml(null, ref);
   document.getElementById('strip-geral-tempoaberto').innerHTML = tempoAbertoStripHtml();
@@ -1784,6 +1798,7 @@ function renderAll(){
   if(document.getElementById('pane-parametros').classList.contains('active')) renderParametros();
 }
 document.getElementById('ref-data').addEventListener('change', ()=>{ renderPainel(); renderRegionalAtivo(); });
+document.getElementById('head-resumo-mensal').addEventListener('click', ()=>{ resumoMensalAberto=!resumoMensalAberto; aplicarResumoMensalAberto(); });
 document.getElementById('tabs').addEventListener('click', e=>{
   const btn=e.target.closest('button[data-tab]'); if(!btn) return;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
