@@ -292,44 +292,44 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
 
     <div class="block-title">Tempo de OS em Aberto <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— tempo corrido, sempre atualizado</span></div>
     <div class="totals-strip" id="strip-geral-tempoaberto"></div>
-    <div class="card">
-      <h3>OS em Aberto — detalhe por Base <span class="h3-side">clique numa base para ver as OS</span></h3>
-      <div class="os-card-list" id="lista-tempoaberto"></div>
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>OS em Aberto — detalhe por Base</span> <span class="h3-side">clique numa base para ver as OS</span></h3>
+      <div class="card-collapsible-body"><div class="os-card-list" id="lista-tempoaberto"></div></div>
     </div>
-    <div class="card">
-      <h3>OS em Aberto — detalhe por Regional <span class="h3-side">clique numa região para ver as OS</span></h3>
-      <div class="os-card-list" id="lista-tempoaberto-regiao"></div>
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>OS em Aberto — detalhe por Regional</span> <span class="h3-side">clique numa região para ver as OS</span></h3>
+      <div class="card-collapsible-body"><div class="os-card-list" id="lista-tempoaberto-regiao"></div></div>
     </div>
 
-    <div class="card">
-      <h3>Status da OS</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-geral-status">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Status da OS</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-geral-status">
         <thead><tr><th>Status</th><th class="r">Qtd. de OS</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Tipo de OS</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-geral-tipo">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Tipo de OS</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-geral-tipo">
         <thead><tr><th>Tipo</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Situação de Faturamento</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-geral-situacao">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Situação de Faturamento</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-geral-situacao">
         <thead><tr><th>Situação</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Valor por Região</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-geral-regiao">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Valor por Região</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-geral-regiao">
         <thead><tr><th>Região</th><th class="r">Valor (R$)</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
-    <div class="card">
-      <h3>Meta do Mês × Realizado por Região</h3>
-      <div class="tablewrap"><table class="dt" id="tbl-geral-metaregiao">
+    <div class="card collapsible">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Meta do Mês × Realizado por Região</span></h3>
+      <div class="card-collapsible-body"><div class="tablewrap"><table class="dt" id="tbl-geral-metaregiao">
         <thead><tr><th>Região</th><th class="r">Meta do Mês (R$)</th><th class="r">Realizado no Mês (R$)</th><th>% Atingido</th></tr></thead><tbody></tbody>
-      </table></div>
+      </table></div></div>
     </div>
   </section>
 
