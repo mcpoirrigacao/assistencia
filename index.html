@@ -1008,21 +1008,39 @@ function metaSemanaStripHtml(regiaoFiltro, refISO){
     tbox('% Atingido', pct(p)) +
     tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
 }
+/* valor Pendente de Faturar (OS fechada sem Data do Faturamento, regra de computeSituacao) cuja Data de Abertura cai dentro do Período da Meta configurado */
+function valorPendenteFaturarPeriodo(regiaoFiltro){
+  const cfg=state.config;
+  if(!periodoValido()) return 0;
+  let s=0;
+  Object.values(state.registros).forEach(r=>{
+    if(regiaoFiltro!=null && r.regiao!==regiaoFiltro) return;
+    if(computeSituacao(r)!==cfg.situacoes.pendente) return;
+    const ab=(r.dataAbertura||'').trim(); if(!ab) return;
+    if(ab<cfg.periodoInicio || ab>cfg.periodoFim) return;
+    s+=n(r.valor);
+  });
+  return s;
+}
+
 /* meta geral do Período da Meta inteiro (soma de todas as regiões quando regiaoFiltro é null) — não depende de mês/semana */
 function metaPeriodoStripHtml(regiaoFiltro){
   if(!periodoValido()){
     return tbox('Meta Geral do Período (R$)', brl0(0), 'Configure o Período da Meta em Parâmetros') +
-      tbox('Realizado no Período (R$)', brl(0)) + tbox('% Atingido', pct(null)) + tbox('Falta para a Meta (R$)', brl0(0), null, {accent:true});
+      tbox('Realizado no Período (R$)', brl(0)) + tbox('% Atingido', pct(null)) + tbox('Falta para a Meta (R$)', brl0(0), null, {accent:true}) +
+      tbox('Valor Pendente de Faturamento (R$)', brl0(0), null, {accent:true});
   }
   const cfg=state.config;
   const meta=metaTotalPeriodo(regiaoFiltro);
   const real=realizadoPeriodoAteHoje(regiaoFiltro);
   const falta=meta-real, p=meta>0?real/meta:null;
+  const pendente=valorPendenteFaturarPeriodo(regiaoFiltro);
   const periodoTxt=`${ddmm(D(cfg.periodoInicio))} a ${ddmm(D(cfg.periodoFim))} de ${D(cfg.periodoFim).getFullYear()}`;
   return tbox('Meta Geral do Período (R$)', brl0(meta), periodoTxt) +
     tbox('Realizado no Período (R$)', brl(real), null, {barPct:p!=null?p*100:0}) +
     tbox('% Atingido', pct(p)) +
-    tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true});
+    tbox('Falta para a Meta (R$)', brl0(falta), null, {accent:true}) +
+    tbox('Valor Pendente de Faturamento (R$)', brl0(pendente), 'OS fechadas sem fatura, abertas no período', {accent:true});
 }
 
 /* ---------- tempo de OS em aberto (dias corridos da Data de Abertura até hoje; tempo corrido, sempre atualizado) ---------- */
