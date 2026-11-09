@@ -274,7 +274,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div id="lista-sugestoes"></div>
     </div>
 
-    <div class="totals-strip" id="strip-geral-kpi"></div>
+    <div class="card collapsible" id="card-geral-kpi">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Indicadores Gerais</span> <span class="h3-side">total de OS, horas, valores</span></h3>
+      <div class="card-collapsible-body"><div class="totals-strip" id="strip-geral-kpi"></div></div>
+    </div>
 
     <div class="block-title">Meta Geral do Período — todas as regiões <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— período completo configurado em Parâmetros</span></div>
     <div class="totals-strip" id="strip-geral-meta-periodo"></div>
@@ -343,7 +346,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <select id="sel-regional"></select>
     </div>
 
-    <div class="totals-strip" id="strip-reg-kpi"></div>
+    <div class="card collapsible" id="card-reg-kpi">
+      <h3 class="card-toggle"><span><span class="chev">▸</span>Indicadores Gerais</span> <span class="h3-side">total de OS, horas, valores</span></h3>
+      <div class="card-collapsible-body"><div class="totals-strip" id="strip-reg-kpi"></div></div>
+    </div>
 
     <div class="block-title">Meta do Mês <span style="font-weight:400;font-size:.8rem;color:var(--texto-suave);">— ritmo redistribuído pelo saldo restante</span></div>
     <div class="totals-strip" id="strip-reg-meta-mes"></div>
