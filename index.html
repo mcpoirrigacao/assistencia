@@ -635,10 +635,11 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div class="field"><label>Departamento</label><select id="m-departamento"></select></div>
       <div class="field"><label>Base</label><select id="m-base"></select></div>
       <div class="field"><label>Técnico(s)</label><div class="chk-list" id="m-tecnicos"></div></div>
-      <div class="field"><label>Quant. de Horas</label><input type="number" step="0.01" min="0" id="m-horas"></div>
+      <div class="field"><label>Quant. de Horas <span class="h3-side" id="m-horas-hint"></span></label><input type="number" step="0.01" min="0" id="m-horas"></div>
       <div class="field"><label>Valor da OS (R$)</label><input type="number" step="0.01" min="0" id="m-valor"></div>
-      <div class="field"><label>Comissionada?</label><select id="m-comissionada"><option value="">— selecione —</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
       <div class="field"><label>NFS-e</label><input type="text" id="m-nfse"></div>
+      <div class="field"><label>Comissionada?</label><select id="m-comissionada"><option value="">— selecione —</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
+      <div class="field"><label>Valor Hora Técnica (R$) <span id="m-vht-obrig" style="color:var(--erro);display:none;">*</span></label><input type="number" step="0.01" min="0" id="m-valorHoraTecnica"></div>
       <div class="field"><label>Data do Faturamento</label><input type="date" id="m-dataFaturamento"></div>
       <div class="field"><label>Forma de Pagamento</label><select id="m-formaPagamento"></select></div>
       <div class="field readonly"><label>Situação (calculada)</label><input type="text" id="m-situacao" disabled></div>
@@ -1718,6 +1719,7 @@ function lerFormModal(){
     tecnicos: lerTecnicosModal(),
     horas: n(document.getElementById('m-horas').value),
     valor: n(document.getElementById('m-valor').value),
+    valorHoraTecnica: n(document.getElementById('m-valorHoraTecnica').value),
     comissionada: document.getElementById('m-comissionada').value,
     comissaoHoras: lerComissaoHorasModal(),
     nfse: document.getElementById('m-nfse').value.trim(),
@@ -1741,6 +1743,7 @@ function preencherModal(r){
   document.getElementById('m-horas').value = n(r.horas);
   document.getElementById('m-valor').value = n(r.valor);
   document.getElementById('m-comissionada').value = r.comissionada||'';
+  document.getElementById('m-valorHoraTecnica').value = n(r.valorHoraTecnica)||'';
   comissaoHorasOriginal = Object.assign({}, r.comissaoHoras||{});
   atualizarComissaoHorasModal();
   document.getElementById('m-nfse').value = r.nfse||'';
@@ -1749,6 +1752,30 @@ function preencherModal(r){
   document.getElementById('m-observacao').value = r.observacao||'';
   atualizarDepartamentoModal();
   atualizarSituacaoModal();
+  atualizarHorasPorValorHoraTecnica(false);
+  atualizarObrigVHT();
+}
+/* Valor Hora Técnica ÷ Valor da Hora (Parâmetros → Comissão) = Quant. de Horas da OS */
+function atualizarHorasPorValorHoraTecnica(sincronizar){
+  const vht=n(document.getElementById('m-valorHoraTecnica').value);
+  const vh=n(state.config.comissao.valorHora);
+  const inpH=document.getElementById('m-horas'), hint=document.getElementById('m-horas-hint');
+  if(vht>0 && vh>0){
+    const h=Math.round(vht/vh*100)/100;
+    inpH.value=h; inpH.readOnly=true; inpH.style.background='var(--areia)';
+    hint.textContent='(calculada)'; hint.title=`${brl(vht)} ÷ ${brl(vh)} por hora`;
+    const insts=document.querySelectorAll('#m-comissao-horas input[data-comissao-tecnico]');
+    if(insts.length===1) insts[0].value=h; // 1 técnico: recebe todas as horas
+    else if(sincronizar){ const a=document.querySelector('#m-comissao-horas input[data-comissao-tecnico][data-auto="1"]'); if(a) a.value=h; }
+    atualizarComissaoResumo();
+  } else {
+    inpH.readOnly=false; inpH.style.background='';
+    hint.title=''; hint.textContent = (vht>0 && !(vh>0)) ? '⚠ falta Valor da Hora' : '';
+  }
+}
+function atualizarObrigVHT(){
+  const obrig=document.getElementById('m-comissionada').value==='Sim' && !!document.getElementById('m-dataFaturamento').value;
+  document.getElementById('m-vht-obrig').style.display = obrig ? '' : 'none';
 }
 function abrirEdicaoOS(id){
   const r=state.registros[id]; if(!r) return;
@@ -1777,7 +1804,9 @@ function fecharModalOS(){ document.getElementById('modal-os').style.display='non
   el.addEventListener('input', atualizarSituacaoModal); el.addEventListener('change', atualizarSituacaoModal);
 });
 document.getElementById('m-tipo').addEventListener('change', atualizarDepartamentoModal);
-document.getElementById('m-tecnicos').addEventListener('change', atualizarComissaoHorasModal);
+document.getElementById('m-tecnicos').addEventListener('change', ()=>{ atualizarComissaoHorasModal(); atualizarHorasPorValorHoraTecnica(true); });
+document.getElementById('m-valorHoraTecnica').addEventListener('input', ()=>atualizarHorasPorValorHoraTecnica(true));
+['m-comissionada','m-dataFaturamento'].forEach(id=>{ const el=document.getElementById(id); el.addEventListener('change', atualizarObrigVHT); el.addEventListener('input', atualizarObrigVHT); });
 document.getElementById('m-horas').addEventListener('input', ()=>{
   const inpAuto=document.querySelector('#m-comissao-horas input[data-comissao-tecnico][data-auto="1"]');
   if(inpAuto) inpAuto.value = document.getElementById('m-horas').value; // 1 técnico só, ainda não alterado manualmente: acompanha as horas lançadas
@@ -1789,6 +1818,7 @@ document.getElementById('btn-salvar-os').addEventListener('click', ()=>{
   const dados=lerFormModal();
   if(!dados.cliente){ toast('Informe o cliente.'); return; }
   if(!dados.comissionada){ toast('Selecione se a OS é Comissionada (Sim ou Não).'); return; }
+  if(dados.comissionada==='Sim' && dados.dataFaturamento && !(dados.valorHoraTecnica>0)){ toast('Informe o Valor Hora Técnica (obrigatório para OS comissionada com Data do Faturamento).'); document.getElementById('m-valorHoraTecnica').focus(); return; }
   if(dados.tecnicos.length>1){ // com mais de um técnico, o preenchimento das horas de cada um deixa de ser opcional
     const faltando=dados.tecnicos.filter(t=>!(n(dados.comissaoHoras[t])>0));
     if(faltando.length){
