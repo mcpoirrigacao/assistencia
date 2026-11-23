@@ -607,6 +607,8 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <button class="btn ghost small" id="btn-add-comum" type="button">+ Usuário</button>
       </div>
       <div class="note" style="margin-top:10px;">E-mail logado agora: <strong id="email-logado">—</strong> · dados compartilhados em <strong id="sp-alvo">SharePoint › Assistencia</strong></div>
+      <div class="note" style="margin-top:6px;">Ao adicionar um e-mail, o app dá permissão de edição na pasta do SharePoint; ao remover, retira essa permissão. Quem é membro do site continua com o acesso do site.</div>
+      <div style="margin-top:8px;"><button class="btn ghost small" id="btn-sync-perm" type="button">Conceder acesso na pasta a todos da lista</button></div>
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -2521,6 +2523,60 @@ async function saveAcesso(){
   if(!ok) toast('Não foi possível salvar os usuários agora.');
 }
 
+/* ---------- permissão na pasta do SharePoint acompanhando as listas de e-mail ----------
+   Usa o login do admin (Sites.ReadWrite.All já concedido). O admin precisa poder compartilhar a pasta. */
+function emailNasListas(em){
+  em=(em||'').toLowerCase();
+  return acesso.emailsAutorizados.some(x=>x.toLowerCase()===em) || acesso.emailsComuns.some(x=>x.toLowerCase()===em);
+}
+async function spPastaUrl(){ await ensureFolder(); return spDriveUrl(`/${SP_BIBLIOTECA}/${SP_PASTA}`); }
+async function spConcederPasta(email){
+  const token=await getGraphToken(); const base=await spPastaUrl(); if(!token||!base) return {ok:false, msg:'sem conexão'};
+  try{
+    const r=await fetch(base+':/invite',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({recipients:[{email}], requireSignIn:true, sendInvitation:false, roles:['write']})});
+    if(r.ok) return {ok:true};
+    let m=''; try{ m=(await r.json()).error.message; }catch(e){}
+    return {ok:false, msg:(r.status===403?'sem permissão para compartilhar a pasta':m||('erro '+r.status))};
+  }catch(e){ return {ok:false, msg:'falha de rede'}; }
+}
+function permTemEmail(p, em){
+  const ids=[p.grantedToV2, p.grantedTo, ...(p.grantedToIdentitiesV2||[]), ...(p.grantedToIdentities||[])].filter(Boolean);
+  return ids.some(g=>{ const u=g.user||g.siteUser||{}; return [u.email,u.loginName,u.userPrincipalName].some(v=>v && String(v).toLowerCase().includes(em)); });
+}
+async function spRetirarPasta(email){
+  const em=email.toLowerCase();
+  const token=await getGraphToken(); const base=await spPastaUrl(); if(!token||!base) return {ok:false, msg:'sem conexão'};
+  try{
+    const r=await fetch(base+':/permissions',{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok) return {ok:false, msg:'erro '+r.status};
+    const perms=((await r.json()).value||[]).filter(p=>!p.inheritedFrom && !(p.roles||[]).includes('owner') && permTemEmail(p,em));
+    if(!perms.length) return {ok:true, nada:true};
+    for(const p of perms){
+      const ids=[...(p.grantedToIdentitiesV2||[]),...(p.grantedToIdentities||[])];
+      let d;
+      if(p.link && ids.length>1){   // link compartilhado com várias pessoas: tira só esta
+        d=await fetch(base+':/permissions/'+p.id+'/revokeGrants',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+          body:JSON.stringify({grantees:[{email}]})});
+      } else {
+        d=await fetch(base+':/permissions/'+p.id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});
+      }
+      if(!d.ok) return {ok:false, msg:(d.status===403?'sem permissão para alterar a pasta':'erro '+d.status)};
+    }
+    return {ok:true};
+  }catch(e){ return {ok:false, msg:'falha de rede'}; }
+}
+async function aposAdicionarEmail(em){
+  const r=await spConcederPasta(em);
+  toast(r.ok ? 'Acesso liberado no app e na pasta do SharePoint.' : 'Salvo no app, mas a pasta não foi liberada: '+r.msg);
+}
+async function aposRemoverEmail(em){
+  if(emailNasListas(em)) return;   // continua em outra lista
+  const r=await spRetirarPasta(em);
+  toast(!r.ok ? 'Removido do app, mas a permissão da pasta não foi retirada: '+r.msg
+       : r.nada ? 'Removido do app (não havia permissão direta na pasta).' : 'Removido do app e da pasta do SharePoint.');
+}
+
 /* ---------- controle de acesso (admin / comum) ---------- */
 function emailAtual(){ return msAccount ? (msAccount.username||'').toLowerCase() : ''; }
 /* Funções do app (App roles) do registro Azure "MCPO API Github".
@@ -2572,8 +2628,8 @@ function renderUsuarios(){
     `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--areia-escura);">
       <span style="flex:1;">👤 ${escapeHtml(em)} <span class="reg R1" style="margin-left:4px;">ADMIN</span></span>
       <button class="btn danger small" data-rem-admin="${i}" type="button">remover</button></div>`).join('')
-    : `<div style="color:var(--texto-suave);font-size:.82rem;">Nenhum admin — o primeiro login vira admin automaticamente.</div>`;
-  la.querySelectorAll('[data-rem-admin]').forEach(b=>b.onclick=async()=>{ acesso.emailsAutorizados.splice(+b.dataset.remAdmin,1); await saveAcesso(); renderUsuarios(); applyAccess(); });
+    : `<div style="color:var(--texto-suave);font-size:.82rem;">Nenhum admin na lista — admins também podem vir da função do Azure (MCPO.Admin / Assistencia.Admin).</div>`;
+  la.querySelectorAll('[data-rem-admin]').forEach(b=>b.onclick=async()=>{ const em=acesso.emailsAutorizados.splice(+b.dataset.remAdmin,1)[0]; await saveAcesso(); renderUsuarios(); applyAccess(); if(em) await aposRemoverEmail(em); });
 
   const lc=document.getElementById('lista-comuns');
   lc.innerHTML = acesso.emailsComuns.length ? acesso.emailsComuns.map((em,i)=>
@@ -2581,19 +2637,28 @@ function renderUsuarios(){
       <span style="flex:1;">👤 ${escapeHtml(em)}</span>
       <button class="btn danger small" data-rem-comum="${i}" type="button">remover</button></div>`).join('')
     : `<div style="color:var(--texto-suave);font-size:.82rem;">Nenhum usuário comum cadastrado.</div>`;
-  lc.querySelectorAll('[data-rem-comum]').forEach(b=>b.onclick=async()=>{ acesso.emailsComuns.splice(+b.dataset.remComum,1); await saveAcesso(); renderUsuarios(); });
+  lc.querySelectorAll('[data-rem-comum]').forEach(b=>b.onclick=async()=>{ const em=acesso.emailsComuns.splice(+b.dataset.remComum,1)[0]; await saveAcesso(); renderUsuarios(); if(em) await aposRemoverEmail(em); });
 }
 document.getElementById('btn-add-admin').addEventListener('click', async ()=>{
   const em=document.getElementById('inp-novo-admin').value.trim().toLowerCase(); if(!em) return;
   if(!acesso.emailsAutorizados.map(x=>x.toLowerCase()).includes(em)) acesso.emailsAutorizados.push(em);
   acesso.emailsComuns=acesso.emailsComuns.filter(x=>x.toLowerCase()!==em);
-  document.getElementById('inp-novo-admin').value=''; await saveAcesso(); renderUsuarios(); applyAccess(); toast('Admin adicionado.');
+  document.getElementById('inp-novo-admin').value=''; await saveAcesso(); renderUsuarios(); applyAccess(); await aposAdicionarEmail(em);
 });
 document.getElementById('btn-add-comum').addEventListener('click', async ()=>{
   const em=document.getElementById('inp-novo-comum').value.trim().toLowerCase(); if(!em) return;
   if(acesso.emailsAutorizados.map(x=>x.toLowerCase()).includes(em)){ toast('Esse e-mail já é admin.'); return; }
   if(!acesso.emailsComuns.map(x=>x.toLowerCase()).includes(em)) acesso.emailsComuns.push(em);
-  document.getElementById('inp-novo-comum').value=''; await saveAcesso(); renderUsuarios(); toast('Usuário adicionado.');
+  document.getElementById('inp-novo-comum').value=''; await saveAcesso(); renderUsuarios(); await aposAdicionarEmail(em);
+});
+document.getElementById('btn-sync-perm').addEventListener('click', async ()=>{
+  if(!msAccount){ toast('Entre com o Microsoft primeiro.'); return; }
+  const todos=Array.from(new Set([...acesso.emailsAutorizados,...acesso.emailsComuns].map(x=>x.toLowerCase())));
+  if(!todos.length){ toast('Nenhum e-mail na lista.'); return; }
+  const btn=document.getElementById('btn-sync-perm'); btn.disabled=true; let ok=0; const falhas=[];
+  for(const em of todos){ btn.textContent=`Liberando ${ok+falhas.length+1}/${todos.length}…`; const r=await spConcederPasta(em); if(r.ok) ok++; else falhas.push(em+' ('+r.msg+')'); }
+  btn.disabled=false; btn.textContent='Conceder acesso na pasta a todos da lista';
+  toast(falhas.length ? `Liberados ${ok}; falharam ${falhas.length}: `+falhas.join(', ') : `Pasta liberada para os ${ok} e-mails.`);
 });
 document.getElementById('btn-sync').addEventListener('click', ()=>{ if(!msAccount){ toast('Entre com o Microsoft primeiro.'); return; } sincronizarNuvem(false); });
 
