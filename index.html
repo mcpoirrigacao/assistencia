@@ -681,6 +681,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
       <button class="btn primary small" id="btn-rc-gerar" type="button">Gerar Relatório</button>
+      <button class="btn ghost small" id="btn-rc-export-xlsx" type="button" style="display:none;">⬇ Exportar Excel</button>
       <button class="btn ghost small" id="btn-rc-export-csv" type="button" style="display:none;">↓ Exportar CSV</button>
     </div>
     <div id="rc-resultado" style="margin-top:16px;"></div>
@@ -1667,13 +1668,14 @@ function atualizarComissaoHorasModal(){
   }
   const atuais={};
   cont.querySelectorAll('input[data-comissao-tecnico]').forEach(inp=>{ atuais[inp.dataset.comissaoTecnico]=inp.value; });
-  cont.innerHTML = nomes.map(nome=>{
+  const aviso = nomes.length>1 ? `<div class="note" style="margin:0 0 6px;">Mais de um técnico: informe as horas de comissão de <strong>cada um</strong> (obrigatório, não pode ficar em branco/zero).</div>` : '';
+  cont.innerHTML = aviso + nomes.map(nome=>{
     let v;
     if(nome in atuais) v=atuais[nome];
     else if(nome in comissaoHorasOriginal) v=comissaoHorasOriginal[nome];
     else v = nomes.length===1 ? totalHoras : 0;
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-      <span style="flex:1;font-size:.86rem;">${escapeHtml(nome)}</span>
+      <span style="flex:1;font-size:.86rem;">${escapeHtml(nome)}${nomes.length>1?' <span style="color:var(--ferrugem);">*</span>':''}</span>
       <input type="number" step="0.01" min="0" style="width:110px;" data-comissao-tecnico="${escapeHtml(nome)}" value="${v}">
     </div>`;
   }).join('');
@@ -1761,6 +1763,13 @@ document.getElementById('btn-salvar-os').addEventListener('click', ()=>{
   const dados=lerFormModal();
   if(!dados.cliente){ toast('Informe o cliente.'); return; }
   if(!dados.comissionada){ toast('Selecione se a OS é Comissionada (Sim ou Não).'); return; }
+  if(dados.tecnicos.length>1){ // com mais de um técnico, o preenchimento das horas de cada um deixa de ser opcional
+    const faltando=dados.tecnicos.filter(t=>!(n(dados.comissaoHoras[t])>0));
+    if(faltando.length){
+      toast('Informe as horas de comissão de cada técnico (obrigatório quando há mais de um): '+faltando.join(', '));
+      return;
+    }
+  }
   const somaComissao=Object.values(dados.comissaoHoras).reduce((a,v)=>a+n(v),0);
   if(somaComissao > dados.horas + 0.01){
     toast(`A soma das horas de comissão (${horasFmt(somaComissao)} h) não pode ultrapassar as horas lançadas (${horasFmt(dados.horas)} h).`);
@@ -1808,6 +1817,21 @@ document.getElementById('inp-import-json').addEventListener('change', e=>{
 /* =========================================================================
    RELATÓRIO DE COMISSÃO
    ========================================================================= */
+function loadSheetJs(){ return new Promise((res,rej)=>{ if(window.XLSX){ res(); return; }
+  const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  s.onload=()=>res(); s.onerror=()=>{ const s2=document.createElement('script');
+  s2.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s2.onload=()=>res(); s2.onerror=()=>rej(new Error('XLSX')); document.head.appendChild(s2); };
+  document.head.appendChild(s); }); }
+function resumoComissaoPorTecnico(linhas){ // agrupa as linhas do relatório por técnico — base da aba "Resumo por Técnico" (pagamento)
+  const porTecnico={};
+  linhas.forEach(l=>{
+    porTecnico[l.tecnico]=porTecnico[l.tecnico]||{ordens:new Set(), horas:0, valor:0};
+    porTecnico[l.tecnico].ordens.add(l.r.id||l.r.numeroOS);
+    porTecnico[l.tecnico].horas+=l.horas;
+    porTecnico[l.tecnico].valor+=l.valor;
+  });
+  return Object.entries(porTecnico).map(([nome,info])=>({nome, qtdOS:info.ordens.size, horas:info.horas, valor:info.valor})).sort((a,b)=>b.valor-a.valor);
+}
 function gerarLinhasComissao(filtros){
   const cfg=state.config;
   const linhas=[];
@@ -1829,16 +1853,15 @@ function gerarLinhasComissao(filtros){
 }
 function relatorioComissaoHtml(linhas){
   if(!linhas.length) return `<div class="sugestoes-ok">Nenhuma OS encontrada para os filtros selecionados.</div>`;
-  const porTecnico={};
   let totalGeral=0;
   const linhasHtml = linhas.map(l=>{
     const reduzida = comissaoFatorTipo(l.r)===0.5;
-    porTecnico[l.tecnico]=(porTecnico[l.tecnico]||0)+l.valor;
     totalGeral+=l.valor;
     return `<tr><td>${escapeHtml(l.r.numeroOS||'—')}</td><td>${l.r.dataFaturamento?ddmm(D(l.r.dataFaturamento)):'—'}</td><td>${escapeHtml(l.r.regiao||'')}</td><td>${escapeHtml(l.r.base||'')}</td><td>${escapeHtml(l.r.tipo||'')}${reduzida?' <span class="fonte-tag fonte-reduzida">50%</span>':''}</td><td class="cel-cliente">${escapeHtml(l.r.cliente||'')}</td><td>${escapeHtml(l.tecnico)}</td><td class="num">${horasFmt(l.horas)}</td><td>${escapeHtml(l.r.comissionada||'—')}</td><td class="num">${brl(l.valor)}</td></tr>`;
   }).join('');
-  const totaisPorTecnico = Object.keys(porTecnico).sort((a,b)=>a.localeCompare(b,'pt-BR')).map(t=>
-    `<tr style="font-weight:600;"><td colspan="9">Total — ${escapeHtml(t)}</td><td class="num">${brl(porTecnico[t])}</td></tr>`).join('');
+  const resumo = resumoComissaoPorTecnico(linhas);
+  const totaisPorTecnico = resumo.map(r=>
+    `<tr style="font-weight:600;"><td colspan="9">Total — ${escapeHtml(r.nome)} (${int(r.qtdOS)} OS, ${horasFmt(r.horas)} h)</td><td class="num">${brl(r.valor)}</td></tr>`).join('');
   return `<div class="tablewrap"><table class="dt">
     <thead><tr><th>Nº OS</th><th>Data Fat.</th><th>Regional</th><th>Base</th><th>Tipo</th><th>Cliente</th><th>Técnico</th><th class="r">Horas</th><th>Comissionada</th><th class="r">Valor Comissão</th></tr></thead>
     <tbody>${linhasHtml}${totaisPorTecnico}<tr style="font-weight:700;border-top:2px solid var(--areia-escura);"><td colspan="9">Total Geral</td><td class="num">${brl(totalGeral)}</td></tr></tbody>
@@ -1856,6 +1879,7 @@ function abrirRelatorioComissao(){
   document.getElementById('rc-tipo-reduzido-label').textContent = cfg.comissao.tipoReduzido || '—';
   document.getElementById('rc-resultado').innerHTML='';
   document.getElementById('btn-rc-export-csv').style.display='none';
+  document.getElementById('btn-rc-export-xlsx').style.display='none';
   _relatorioComissaoAtual=[];
   document.getElementById('modal-relatorio-comissao').style.display='flex';
 }
@@ -1874,6 +1898,7 @@ document.getElementById('btn-rc-gerar').addEventListener('click', ()=>{
   _relatorioComissaoAtual = gerarLinhasComissao(filtros);
   document.getElementById('rc-resultado').innerHTML = relatorioComissaoHtml(_relatorioComissaoAtual);
   document.getElementById('btn-rc-export-csv').style.display = _relatorioComissaoAtual.length ? '' : 'none';
+  document.getElementById('btn-rc-export-xlsx').style.display = _relatorioComissaoAtual.length ? '' : 'none';
 });
 document.getElementById('btn-rc-export-csv').addEventListener('click', ()=>{
   let csv='NumeroOS;DataFaturamento;Regiao;Base;Tipo;Cliente;Tecnico;HorasComissao;Comissionada;Reduzida50;ValorComissao\n';
@@ -1883,6 +1908,33 @@ document.getElementById('btn-rc-export-csv').addEventListener('click', ()=>{
   });
   download('relatorio_comissao.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV exportado.');
+});
+document.getElementById('btn-rc-export-xlsx').addEventListener('click', async ()=>{
+  if(!_relatorioComissaoAtual.length){ toast('Gere o relatório antes de exportar.'); return; }
+  const btn=document.getElementById('btn-rc-export-xlsx');
+  const textoOriginal=btn.textContent; btn.textContent='⏳ gerando...'; btn.disabled=true;
+  try{
+    await loadSheetJs();
+    const resumo=resumoComissaoPorTecnico(_relatorioComissaoAtual);
+    const wb=XLSX.utils.book_new();
+    const wsDetalhe=XLSX.utils.json_to_sheet(_relatorioComissaoAtual.map(l=>({
+      'Nº OS':l.r.numeroOS||'', 'Data Faturamento':l.r.dataFaturamento||'', 'Regional':l.r.regiao||'', 'Base':l.r.base||'',
+      'Tipo':l.r.tipo||'', 'Cliente':l.r.cliente||'', 'Técnico':l.tecnico, 'Horas Comissão':l.horas,
+      'Comissionada':l.r.comissionada||'', 'Reduzida 50%':comissaoFatorTipo(l.r)===0.5?'Sim':'Não', 'Valor Comissão (R$)':l.valor
+    })));
+    XLSX.utils.book_append_sheet(wb, wsDetalhe, 'Detalhado');
+    const wsResumo=XLSX.utils.json_to_sheet(resumo.map(r=>({
+      'Técnico':r.nome, 'Qtd. OS':r.qtdOS, 'Horas Totais':r.horas, 'Total Comissão (R$)':r.valor
+    })));
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo por Técnico');
+    const hoje=new Date();
+    const nome='comissao_'+hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0')+'.xlsx';
+    XLSX.writeFile(wb, nome);
+  }catch(e){
+    toast('Não foi possível gerar o Excel (biblioteca não carregou). Confira a conexão.');
+  }finally{
+    btn.textContent=textoOriginal; btn.disabled=false;
+  }
 });
 
 /* =========================================================================
