@@ -767,10 +767,10 @@ function withDefaults(s){
     if(!Array.isArray(r.tecnicos)) r.tecnicos = r.tecnico ? [r.tecnico] : [];
     if('tecnico' in r) delete r.tecnico;
     if(r.comissionada!=='Sim' && r.comissionada!=='Não') r.comissionada='Não'; // retrocompat: lançamentos antigos não tinham esse campo — por segurança, não geram comissão até serem revisados
-    if(!r.comissaoHoras || typeof r.comissaoHoras!=='object'){ // retrocompat: divide as horas lançadas igualmente entre os técnicos como ponto de partida
+    if(!r.comissaoHoras || typeof r.comissaoHoras!=='object'){ // retrocompat: 1 técnico copia as horas lançadas; com mais de 1, começa em 0 (preenchimento manual obrigatório)
       r.comissaoHoras={};
-      const qtd=r.tecnicos.length;
-      if(qtd) r.tecnicos.forEach(t=>{ r.comissaoHoras[t]=n(r.horas)/qtd; });
+      if(r.tecnicos.length===1) r.comissaoHoras[r.tecnicos[0]]=n(r.horas);
+      else r.tecnicos.forEach(t=>{ r.comissaoHoras[t]=0; });
     }
   });
   return s;
@@ -827,12 +827,20 @@ function comissaoHorasTecnico(r, nome){ return n((r.comissaoHoras||{})[nome]); }
 function comissaoSomaHoras(r){ return Object.values(r.comissaoHoras||{}).reduce((a,v)=>a+n(v),0); } // soma já atribuída, p/ validar contra r.horas
 function comissaoFatorTipo(r){ // 50% quando o Tipo de OS é o configurado como "reduzido" em Parâmetros (por padrão, reaproveita o Tipo "Interna")
   const cfg=state.config;
-  return (cfg.comissao.tipoReduzido && r.tipo===cfg.comissao.tipoReduzido) ? 0.5 : 1;
+  const alvo=(cfg.comissao.tipoReduzido||'').trim();
+  return (alvo && (r.tipo||'').trim()===alvo) ? 0.5 : 1;
 }
-function comissaoValorTecnico(r, nome){ // comissão = horas do técnico × valor da hora × percentual, só quando Comissionada=Sim e a OS está Faturada (tem Data do Faturamento)
+function comissaoFechada(r){ // "fecha" a comissão só com a Data do Faturamento preenchida (não depende de NFS-e, diferente da situação "Faturado"); baixa interna nunca gera comissão
+  const cfg=state.config;
+  const chave=(cfg.chaveBaixaInterna||'').trim().toUpperCase();
+  const fp=(r.formaPagamento||'').toUpperCase();
+  if(chave && fp.includes(chave)) return false;
+  return !!(r.dataFaturamento||'').trim();
+}
+function comissaoValorTecnico(r, nome){ // comissão = horas do técnico × valor da hora × percentual, só quando Comissionada=Sim e a OS tem Data do Faturamento preenchida
   const cfg=state.config;
   if(r.comissionada!=='Sim') return 0;
-  if(computeSituacao(r)!==cfg.situacoes.faturado) return 0;
+  if(!comissaoFechada(r)) return 0;
   return comissaoHorasTecnico(r,nome) * n(cfg.comissao.valorHora) * (n(cfg.comissao.percentual)/100) * comissaoFatorTipo(r);
 }
 
@@ -1670,16 +1678,16 @@ function atualizarComissaoHorasModal(){
   cont.querySelectorAll('input[data-comissao-tecnico]').forEach(inp=>{ atuais[inp.dataset.comissaoTecnico]=inp.value; });
   const aviso = nomes.length>1 ? `<div class="note" style="margin:0 0 6px;">Mais de um técnico: informe as horas de comissão de <strong>cada um</strong> (obrigatório, não pode ficar em branco/zero).</div>` : '';
   cont.innerHTML = aviso + nomes.map(nome=>{
-    let v;
+    let v, auto=false;
     if(nome in atuais) v=atuais[nome];
     else if(nome in comissaoHorasOriginal) v=comissaoHorasOriginal[nome];
-    else v = nomes.length===1 ? totalHoras : 0;
+    else{ v = nomes.length===1 ? totalHoras : 0; auto = nomes.length===1; } // só 1 técnico: começa copiando as horas lançadas e segue acompanhando até ser editado manualmente
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
       <span style="flex:1;font-size:.86rem;">${escapeHtml(nome)}${nomes.length>1?' <span style="color:var(--ferrugem);">*</span>':''}</span>
-      <input type="number" step="0.01" min="0" style="width:110px;" data-comissao-tecnico="${escapeHtml(nome)}" value="${v}">
+      <input type="number" step="0.01" min="0" style="width:110px;" data-comissao-tecnico="${escapeHtml(nome)}" ${auto?'data-auto="1"':''} value="${v}">
     </div>`;
   }).join('');
-  cont.querySelectorAll('input[data-comissao-tecnico]').forEach(inp=>inp.addEventListener('input', atualizarComissaoResumo));
+  cont.querySelectorAll('input[data-comissao-tecnico]').forEach(inp=>inp.addEventListener('input', ()=>{ inp.removeAttribute('data-auto'); atualizarComissaoResumo(); }));
   atualizarComissaoResumo();
 }
 function lerFormModal(){
@@ -1756,7 +1764,11 @@ function fecharModalOS(){ document.getElementById('modal-os').style.display='non
 });
 document.getElementById('m-tipo').addEventListener('change', atualizarDepartamentoModal);
 document.getElementById('m-tecnicos').addEventListener('change', atualizarComissaoHorasModal);
-document.getElementById('m-horas').addEventListener('input', atualizarComissaoResumo);
+document.getElementById('m-horas').addEventListener('input', ()=>{
+  const inpAuto=document.querySelector('#m-comissao-horas input[data-comissao-tecnico][data-auto="1"]');
+  if(inpAuto) inpAuto.value = document.getElementById('m-horas').value; // 1 técnico só, ainda não alterado manualmente: acompanha as horas lançadas
+  atualizarComissaoResumo();
+});
 document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalOS);
 document.getElementById('modal-os').addEventListener('click', e=>{ if(e.target.id==='modal-os') fecharModalOS(); });
 document.getElementById('btn-salvar-os').addEventListener('click', ()=>{
@@ -1836,8 +1848,8 @@ function gerarLinhasComissao(filtros){
   const cfg=state.config;
   const linhas=[];
   Object.values(state.registros).forEach(r=>{
-    if(computeSituacao(r)!==cfg.situacoes.faturado) return; // comissão só fecha com a OS Faturada (Data do Faturamento preenchida)
-    const df=(r.dataFaturamento||'').trim(); if(!df) return;
+    if(!comissaoFechada(r)) return; // comissão só fecha com a Data do Faturamento preenchida (independente do NFS-e)
+    const df=(r.dataFaturamento||'').trim();
     if(filtros.dataIni && df<filtros.dataIni) return;
     if(filtros.dataFim && df>filtros.dataFim) return;
     if(filtros.regiao && r.regiao!==filtros.regiao) return;
