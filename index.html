@@ -527,13 +527,10 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     </div>
 
     <div class="card">
-      <h3>Técnicos</h3>
-      <div class="tablewrap" style="margin-bottom:10px;">
-        <table class="dt" id="tbl-p-tecnicos"><thead><tr><th>Técnico</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-        <div class="field" style="margin:0;flex:1;min-width:160px;"><label>Novo técnico</label><input type="text" id="p-tecnico-nome" placeholder="ex: JOÃO PEREIRA"></div>
-        <button class="btn primary small" id="btn-add-tecnico" type="button">+ Técnico</button>
+      <h3>Técnicos <span class="h3-side">técnico / auxiliar</span></h3>
+      <button class="btn primary small" id="btn-add-tecnico" type="button" style="margin-bottom:10px;">+ Novo Técnico</button>
+      <div class="tablewrap" style="max-height:420px;overflow-y:auto;">
+        <table class="dt" id="tbl-p-tecnicos"><thead><tr><th>Nome</th><th>Função</th><th>Contato</th><th>CPF</th><th style="width:90px;">Ações</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
 
@@ -661,6 +658,25 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   </div>
 </div>
 
+<div class="overlay modal" id="modal-tecnico">
+  <div class="box" style="max-width:560px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:1.15rem;" id="mt-titulo">Novo Técnico</h2>
+      <button class="btn ghost small" id="btn-fechar-mt" type="button">✕ Fechar</button>
+    </div>
+    <div class="grid">
+      <div class="field"><label>Nome</label><input type="text" id="mt-nome" placeholder="ex: JOÃO PEREIRA"></div>
+      <div class="field"><label>Função</label><select id="mt-funcao"><option value="Técnico">Técnico</option><option value="Auxiliar">Auxiliar</option></select></div>
+      <div class="field"><label>Contato</label><input type="text" id="mt-contato" placeholder="telefone ou e-mail"></div>
+      <div class="field"><label>CPF</label><input type="text" id="mt-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00"></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+      <button class="btn primary" id="btn-salvar-mt" type="button">Salvar</button>
+      <button class="btn danger" id="btn-excluir-mt" type="button">Excluir Técnico</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay modal" id="modal-relatorio-comissao">
   <div class="box" style="max-width:960px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
@@ -726,6 +742,7 @@ function defaultState(){
       tiposOS:['Interna','Cliente','Garantia'],
       tiposComDepartamento:['Interna'], // quais Tipos de OS liberam o preenchimento de Departamento
       tecnicos:['ALTEMIR JOÃO','LEONARDO FRANCO'],
+      tecnicosInfo:{}, // {nome: {funcao, contato, cpf}} — cadastro complementar; a lista "tecnicos" continua sendo a lista de nomes
       departamentos:[],
       bases:['PALMAS - 01','CRISTALINA - 07','PARACATU - 08','FORMOSA - 10','NOVA CRIXÁS - 12'],
       formasPagamento:['IRRICONTROL - BOLETO','BAUER - BOLETO','CLIENTE','BAIXA INTERNA'],
@@ -760,6 +777,7 @@ function withDefaults(s){
   if(!s.config.faturamentoHistorico || typeof s.config.faturamentoHistorico!=='object') s.config.faturamentoHistorico={};
   s.config.regioes.forEach(r=>{ if(!s.config.faturamentoHistorico[r] || typeof s.config.faturamentoHistorico[r]!=='object') s.config.faturamentoHistorico[r]={}; });
   s.config.comissao=Object.assign({}, d.config.comissao, s.config.comissao||{});
+  if(!s.config.tecnicosInfo || typeof s.config.tecnicosInfo!=='object' || Array.isArray(s.config.tecnicosInfo)) s.config.tecnicosInfo={};
   if(s.config.comissao.tipoReduzido && !s.config.tiposOS.includes(s.config.comissao.tipoReduzido)) s.config.comissao.tipoReduzido=''; // tipo removido: não força mais redução
   if(!s.config.periodoInicio||!s.config.periodoFim){ const [pIni,pFim]=defaultPeriodo(); s.config.periodoInicio=s.config.periodoInicio||pIni; s.config.periodoFim=s.config.periodoFim||pFim; }
   s.registros=s.registros||{};
@@ -1865,14 +1883,14 @@ function relatorioComissaoHtml(linhas){
   const linhasHtml = linhas.map(l=>{
     const reduzida = comissaoFatorTipo(l.r)===0.5;
     totalGeral+=l.valor;
-    return `<tr><td>${escapeHtml(l.r.numeroOS||'—')}</td><td>${l.r.dataFaturamento?ddmm(D(l.r.dataFaturamento)):'—'}</td><td>${escapeHtml(l.r.regiao||'')}</td><td>${escapeHtml(l.r.base||'')}</td><td>${escapeHtml(l.r.tipo||'')}${reduzida?' <span class="fonte-tag fonte-reduzida">50%</span>':''}</td><td class="cel-cliente">${escapeHtml(l.r.cliente||'')}</td><td>${escapeHtml(l.tecnico)}</td><td class="num">${horasFmt(l.horas)}</td><td>${escapeHtml(l.r.comissionada||'—')}</td><td class="num">${brl(l.valor)}</td></tr>`;
+    return `<tr><td>${escapeHtml(l.r.numeroOS||'—')}</td><td>${l.r.dataFaturamento?ddmm(D(l.r.dataFaturamento)):'—'}</td><td>${escapeHtml(l.r.regiao||'')}</td><td>${escapeHtml(l.r.base||'')}</td><td>${escapeHtml(l.r.tipo||'')}${reduzida?' <span class="fonte-tag fonte-reduzida">50%</span>':''}</td><td class="cel-cliente">${escapeHtml(l.r.cliente||'')}</td><td>${escapeHtml(l.tecnico)}</td><td>${escapeHtml(tecInfo(l.tecnico).funcao||'—')}</td><td style="white-space:nowrap;">${escapeHtml(tecInfo(l.tecnico).cpf||'—')}</td><td class="num">${horasFmt(l.horas)}</td><td>${escapeHtml(l.r.comissionada||'—')}</td><td class="num">${brl(l.valor)}</td></tr>`;
   }).join('');
   const resumo = resumoComissaoPorTecnico(linhas);
   const totaisPorTecnico = resumo.map(r=>
-    `<tr style="font-weight:600;"><td colspan="9">Total — ${escapeHtml(r.nome)} (${int(r.qtdOS)} OS, ${horasFmt(r.horas)} h)</td><td class="num">${brl(r.valor)}</td></tr>`).join('');
+    `<tr style="font-weight:600;"><td colspan="11">Total — ${escapeHtml(r.nome)} (${int(r.qtdOS)} OS, ${horasFmt(r.horas)} h)</td><td class="num">${brl(r.valor)}</td></tr>`).join('');
   return `<div class="tablewrap"><table class="dt">
-    <thead><tr><th>Nº OS</th><th>Data Fat.</th><th>Regional</th><th>Base</th><th>Tipo</th><th>Cliente</th><th>Técnico</th><th class="r">Horas</th><th>Comissionada</th><th class="r">Valor Comissão</th></tr></thead>
-    <tbody>${linhasHtml}${totaisPorTecnico}<tr style="font-weight:700;border-top:2px solid var(--areia-escura);"><td colspan="9">Total Geral</td><td class="num">${brl(totalGeral)}</td></tr></tbody>
+    <thead><tr><th>Nº OS</th><th>Data Fat.</th><th>Regional</th><th>Base</th><th>Tipo</th><th>Cliente</th><th>Técnico</th><th>Função</th><th>CPF</th><th class="r">Horas</th><th>Comissionada</th><th class="r">Valor Comissão</th></tr></thead>
+    <tbody>${linhasHtml}${totaisPorTecnico}<tr style="font-weight:700;border-top:2px solid var(--areia-escura);"><td colspan="11">Total Geral</td><td class="num">${brl(totalGeral)}</td></tr></tbody>
   </table></div>`;
 }
 let _relatorioComissaoAtual=[];
@@ -1909,10 +1927,10 @@ document.getElementById('btn-rc-gerar').addEventListener('click', ()=>{
   document.getElementById('btn-rc-export-xlsx').style.display = _relatorioComissaoAtual.length ? '' : 'none';
 });
 document.getElementById('btn-rc-export-csv').addEventListener('click', ()=>{
-  let csv='NumeroOS;DataFaturamento;Regiao;Base;Tipo;Cliente;Tecnico;HorasComissao;Comissionada;Reduzida50;ValorComissao\n';
+  let csv='NumeroOS;DataFaturamento;Regiao;Base;Tipo;Cliente;Tecnico;Funcao;CPF;HorasComissao;Comissionada;Reduzida50;ValorComissao\n';
   _relatorioComissaoAtual.forEach(l=>{
     const reduzida = comissaoFatorTipo(l.r)===0.5 ? 'Sim':'Não';
-    csv+=`${l.r.numeroOS||''};${l.r.dataFaturamento||''};${l.r.regiao||''};${l.r.base||''};${l.r.tipo||''};${(l.r.cliente||'').replace(/;/g,',')};${l.tecnico};${l.horas.toFixed(2)};${l.r.comissionada||''};${reduzida};${l.valor.toFixed(2)}\n`;
+    csv+=`${l.r.numeroOS||''};${l.r.dataFaturamento||''};${l.r.regiao||''};${l.r.base||''};${l.r.tipo||''};${(l.r.cliente||'').replace(/;/g,',')};${l.tecnico};${tecInfo(l.tecnico).funcao||''};${tecInfo(l.tecnico).cpf||''};${l.horas.toFixed(2)};${l.r.comissionada||''};${reduzida};${l.valor.toFixed(2)}\n`;
   });
   download('relatorio_comissao.csv', csv, 'text/csv;charset=utf-8');
   toast('CSV exportado.');
@@ -1927,12 +1945,12 @@ document.getElementById('btn-rc-export-xlsx').addEventListener('click', async ()
     const wb=XLSX.utils.book_new();
     const wsDetalhe=XLSX.utils.json_to_sheet(_relatorioComissaoAtual.map(l=>({
       'Nº OS':l.r.numeroOS||'', 'Data Faturamento':l.r.dataFaturamento||'', 'Regional':l.r.regiao||'', 'Base':l.r.base||'',
-      'Tipo':l.r.tipo||'', 'Cliente':l.r.cliente||'', 'Técnico':l.tecnico, 'Horas Comissão':l.horas,
+      'Tipo':l.r.tipo||'', 'Cliente':l.r.cliente||'', 'Técnico':l.tecnico, 'Função':tecInfo(l.tecnico).funcao||'', 'CPF':tecInfo(l.tecnico).cpf||'', 'Horas Comissão':l.horas,
       'Comissionada':l.r.comissionada||'', 'Reduzida 50%':comissaoFatorTipo(l.r)===0.5?'Sim':'Não', 'Valor Comissão (R$)':l.valor
     })));
     XLSX.utils.book_append_sheet(wb, wsDetalhe, 'Detalhado');
     const wsResumo=XLSX.utils.json_to_sheet(resumo.map(r=>({
-      'Técnico':r.nome, 'Qtd. OS':r.qtdOS, 'Horas Totais':r.horas, 'Total Comissão (R$)':r.valor
+      'Técnico':r.nome, 'Função':tecInfo(r.nome).funcao||'', 'CPF':tecInfo(r.nome).cpf||'', 'Qtd. OS':r.qtdOS, 'Horas Totais':r.horas, 'Total Comissão (R$)':r.valor
     })));
     XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo por Técnico');
     const hoje=new Date();
@@ -1972,7 +1990,7 @@ function _renderParametros0(){
   renderFaturamentoHistorico();
   renderListaStatus();
   renderListaTipos();
-  renderListaSimples('#tbl-p-tecnicos', cfg.tecnicos, 'tecnicos');
+  renderListaTecnicos();
   document.getElementById('p-com-valorhora').value = cfg.comissao.valorHora;
   document.getElementById('p-com-percentual').value = cfg.comissao.percentual;
   document.getElementById('p-com-tiporeduzido').innerHTML = `<option value="">— nenhum —</option>` +
@@ -2094,7 +2112,64 @@ function ligarAddSimples(btnId, inpId, chave, upper){
 }
 ligarAddSimples('btn-add-status','p-status-nome','statusOS',false);
 ligarAddSimples('btn-add-tipo','p-tipo-nome','tiposOS',false);
-ligarAddSimples('btn-add-tecnico','p-tecnico-nome','tecnicos',true);
+/* ---------- cadastro de técnicos (nome, função, contato, CPF) ---------- */
+function tecInfo(nome){ return (state.config.tecnicosInfo||{})[nome]||{}; }
+function cpfFmt(v){ const d=String(v||'').replace(/\D/g,'').slice(0,11);
+  return d.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/,'.$1-$2'); }
+function renderListaTecnicos(){
+  const cfg=state.config;
+  const nomes=cfg.tecnicos.slice().sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  document.querySelector('#tbl-p-tecnicos tbody').innerHTML = nomes.map(nome=>{ const i=tecInfo(nome);
+    return `<tr><td>${escapeHtml(nome)}</td><td>${escapeHtml(i.funcao||'—')}</td><td>${escapeHtml(i.contato||'—')}</td><td>${escapeHtml(i.cpf||'—')}</td>
+      <td><button class="btn ghost small" data-edit-tecnico="${escapeHtml(nome)}" type="button">editar</button></td></tr>`; }).join('')
+    || `<tr><td colspan="5" style="color:var(--texto-suave)">Nenhum técnico cadastrado.</td></tr>`;
+}
+let _tecEditando=null;
+function abrirModalTecnico(nome){
+  _tecEditando=nome||null; const i=nome?tecInfo(nome):{};
+  document.getElementById('mt-titulo').textContent = nome ? 'Editar Técnico — '+nome : 'Novo Técnico';
+  document.getElementById('mt-nome').value = nome||'';
+  document.getElementById('mt-funcao').value = i.funcao||'Técnico';
+  document.getElementById('mt-contato').value = i.contato||'';
+  document.getElementById('mt-cpf').value = i.cpf||'';
+  document.getElementById('btn-excluir-mt').style.display = nome ? '' : 'none';
+  document.getElementById('modal-tecnico').style.display='flex';
+}
+function fecharModalTecnico(){ document.getElementById('modal-tecnico').style.display='none'; _tecEditando=null; }
+document.getElementById('btn-add-tecnico').addEventListener('click', ()=>abrirModalTecnico(null));
+document.getElementById('tbl-p-tecnicos').addEventListener('click', e=>{ const b=e.target.closest('[data-edit-tecnico]'); if(b) abrirModalTecnico(b.dataset.editTecnico); });
+document.getElementById('btn-fechar-mt').addEventListener('click', fecharModalTecnico);
+document.getElementById('modal-tecnico').addEventListener('click', e=>{ if(e.target.id==='modal-tecnico') fecharModalTecnico(); });
+document.getElementById('mt-cpf').addEventListener('input', e=>{ e.target.value=cpfFmt(e.target.value); });
+document.getElementById('btn-salvar-mt').addEventListener('click', ()=>{
+  const cfg=state.config;
+  const nome=document.getElementById('mt-nome').value.trim().toUpperCase();
+  if(!nome){ toast('Informe o nome do técnico.'); return; }
+  if(nome!==_tecEditando && cfg.tecnicos.includes(nome)){ toast('Já existe um técnico com esse nome.'); return; }
+  const info={ funcao:document.getElementById('mt-funcao').value, contato:document.getElementById('mt-contato').value.trim(), cpf:cpfFmt(document.getElementById('mt-cpf').value) };
+  if(_tecEditando && nome!==_tecEditando){ // renomear: atualiza a lista e as OS que citam o nome antigo
+    const antigo=_tecEditando;
+    cfg.tecnicos=cfg.tecnicos.map(t=>t===antigo?nome:t);
+    delete cfg.tecnicosInfo[antigo];
+    Object.entries(state.registros).forEach(([id,r])=>{
+      if(!(r.tecnicos||[]).includes(antigo)) return;
+      r.tecnicos=r.tecnicos.map(t=>t===antigo?nome:t);
+      if(r.comissaoHoras && antigo in r.comissaoHoras){ r.comissaoHoras[nome]=r.comissaoHoras[antigo]; delete r.comissaoHoras[antigo]; }
+      dirtyReg.add(id);
+    });
+  } else if(!_tecEditando){ cfg.tecnicos.push(nome); }
+  cfg.tecnicosInfo[nome]=info;
+  dirtyConfig.add('tecnicos'); dirtyConfig.add('tecnicosInfo');
+  fecharModalTecnico(); save(); renderParametros(); renderAll(); toast('Técnico salvo.');
+});
+document.getElementById('btn-excluir-mt').addEventListener('click', ()=>{
+  const nome=_tecEditando; if(!nome) return;
+  if(!confirm('Excluir o técnico '+nome+' do cadastro? As OS já lançadas com ele continuam iguais.')) return;
+  const cfg=state.config;
+  cfg.tecnicos=cfg.tecnicos.filter(t=>t!==nome); delete cfg.tecnicosInfo[nome];
+  dirtyConfig.add('tecnicos'); dirtyConfig.add('tecnicosInfo');
+  fecharModalTecnico(); save(); renderParametros(); renderAll(); toast('Técnico excluído.');
+});
 ligarAddSimples('btn-add-departamento','p-departamento-nome','departamentos',false);
 ligarAddSimples('btn-add-base','p-base-nome','bases',true);
 ligarAddSimples('btn-add-formapgto','p-formapgto-nome','formasPagamento',true);
@@ -2315,7 +2390,7 @@ function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status')
 function aplicarLocalSobre(base){
   const res={ config: clone(base.config||state.config), registros: clone(base.registros||{}) };
   dirtyReg.forEach(id=>{ if(state.registros[id]) res.registros[id]=clone(state.registros[id]); else delete res.registros[id]; });
-  ['regioes','statusOS','statusFechados','tiposOS','tiposComDepartamento','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna','faturamentoHistorico','comissao'].forEach(sec=>{
+  ['regioes','statusOS','statusFechados','tiposOS','tiposComDepartamento','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna','faturamentoHistorico','comissao','tecnicosInfo'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
   if(dirtyConfig.has('periodo')){ res.config.periodoInicio=state.config.periodoInicio; res.config.periodoFim=state.config.periodoFim; }
