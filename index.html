@@ -544,7 +544,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
         <div class="field"><label>Percentual de Comissão (%)</label><input type="number" step="0.01" min="0" max="100" id="p-com-percentual"></div>
         <div class="field"><label>Tipo de OS com comissão reduzida (50%)</label><select id="p-com-tiporeduzido"></select></div>
       </div>
-      <div class="note">A comissão só é calculada para OS marcadas como "Comissionada = Sim" no lançamento, e fecha quando a OS tem Data do Faturamento preenchida (mesma regra da situação "Faturado"). Quando o Tipo de OS da ordem é igual ao selecionado acima, a comissão desse(s) técnico(s) nessa OS cai para 50% do valor calculado. Selecione "— nenhum —" se nenhum Tipo de OS deve ter redução.</div>
+      <div class="note">A comissão só é calculada para OS marcadas como "Comissionada = Sim" no lançamento, e fecha quando a OS tem Data do Faturamento preenchida, mesmo sem NFS-e. OS de baixa interna também entram no relatório de comissão, mas continuam fora do faturamento e da meta. Quando o Tipo de OS da ordem é igual ao selecionado acima, a comissão desse(s) técnico(s) nessa OS cai para 50% do valor calculado. Selecione "— nenhum —" se nenhum Tipo de OS deve ter redução.</div>
     </div>
 
     <div class="card">
@@ -830,11 +830,7 @@ function comissaoFatorTipo(r){ // 50% quando o Tipo de OS é o configurado como 
   const alvo=(cfg.comissao.tipoReduzido||'').trim();
   return (alvo && (r.tipo||'').trim()===alvo) ? 0.5 : 1;
 }
-function comissaoFechada(r){ // "fecha" a comissão só com a Data do Faturamento preenchida (não depende de NFS-e, diferente da situação "Faturado"); baixa interna nunca gera comissão
-  const cfg=state.config;
-  const chave=(cfg.chaveBaixaInterna||'').trim().toUpperCase();
-  const fp=(r.formaPagamento||'').toUpperCase();
-  if(chave && fp.includes(chave)) return false;
+function comissaoFechada(r){ // "fecha" a comissão só com a Data do Faturamento preenchida (não depende de NFS-e, diferente da situação "Faturado"); OS de baixa interna também gera comissão (com 50% se o Tipo for o reduzido), mas continua fora do faturamento e da meta
   return !!(r.dataFaturamento||'').trim();
 }
 function comissaoValorTecnico(r, nome){ // comissão = horas do técnico × valor da hora × percentual, só quando Comissionada=Sim e a OS tem Data do Faturamento preenchida
