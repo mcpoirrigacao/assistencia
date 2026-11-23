@@ -105,6 +105,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
   .fonte-tag{display:inline-block;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;}
   .fonte-hist{background:#e3edf7;color:#2f6690;}
   .fonte-os{background:var(--areia-escura);color:var(--texto-suave);}
+  .fonte-reduzida{background:#fdecd8;color:var(--ferrugem);}
 
   .card.collapsible h3.card-toggle{cursor:pointer;user-select:none;}
   .card.collapsible h3.card-toggle:hover{color:var(--azul-escuro);}
@@ -430,6 +431,7 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
 
     <div class="hint-row">
       <button class="btn primary small" id="btn-add-os" type="button">+ Nova OS</button>
+      <button class="btn ghost small" id="btn-relatorio-comissao" type="button">📋 Relatório de Comissão</button>
       <button class="btn ghost small" id="btn-export-csv" type="button">↓ Exportar CSV</button>
       <button class="btn ghost small" id="btn-export-json" type="button">↓ Exportar dados (JSON)</button>
       <label class="btn ghost small" style="cursor:pointer;margin:0;">↑ Importar dados (JSON)
@@ -536,6 +538,16 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
     </div>
 
     <div class="card">
+      <h3>Comissão de Técnicos <span class="h3-side">comissão = horas do técnico na OS × valor da hora × percentual</span></h3>
+      <div class="grid" style="max-width:780px;">
+        <div class="field"><label>Valor da Hora (R$)</label><input type="number" step="0.01" min="0" id="p-com-valorhora"></div>
+        <div class="field"><label>Percentual de Comissão (%)</label><input type="number" step="0.01" min="0" max="100" id="p-com-percentual"></div>
+        <div class="field"><label>Tipo de OS com comissão reduzida (50%)</label><select id="p-com-tiporeduzido"></select></div>
+      </div>
+      <div class="note">A comissão só é calculada para OS marcadas como "Comissionada = Sim" no lançamento, e fecha quando a OS tem Data do Faturamento preenchida (mesma regra da situação "Faturado"). Quando o Tipo de OS da ordem é igual ao selecionado acima, a comissão desse(s) técnico(s) nessa OS cai para 50% do valor calculado. Selecione "— nenhum —" se nenhum Tipo de OS deve ter redução.</div>
+    </div>
+
+    <div class="card">
       <h3>Departamento</h3>
       <div class="tablewrap" style="margin-bottom:10px;">
         <table class="dt" id="tbl-p-departamentos"><thead><tr><th>Departamento</th><th style="width:70px;"></th></tr></thead><tbody></tbody></table>
@@ -628,10 +640,15 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <div class="field"><label>Técnico(s)</label><div class="chk-list" id="m-tecnicos"></div></div>
       <div class="field"><label>Quant. de Horas</label><input type="number" step="0.01" min="0" id="m-horas"></div>
       <div class="field"><label>Valor da OS (R$)</label><input type="number" step="0.01" min="0" id="m-valor"></div>
+      <div class="field"><label>Comissionada?</label><select id="m-comissionada"><option value="">— selecione —</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
       <div class="field"><label>NFS-e</label><input type="text" id="m-nfse"></div>
       <div class="field"><label>Data do Faturamento</label><input type="date" id="m-dataFaturamento"></div>
       <div class="field"><label>Forma de Pagamento</label><select id="m-formaPagamento"></select></div>
       <div class="field readonly"><label>Situação (calculada)</label><input type="text" id="m-situacao" disabled></div>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Divisão de Horas para Comissão <span class="h3-side" id="m-comissao-resumo"></span></label>
+      <div id="m-comissao-horas"></div>
     </div>
     <div class="field" style="margin-top:12px;">
       <label>Observação</label>
@@ -641,6 +658,32 @@ function loadMsal(){return new Promise((res,rej)=>{if(window.msal){res();return;
       <button class="btn primary" id="btn-salvar-os" type="button">Salvar</button>
       <button class="btn danger" id="btn-excluir-os" type="button">Excluir OS</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay modal" id="modal-relatorio-comissao">
+  <div class="box" style="max-width:960px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:1.15rem;">Relatório de Comissão</h2>
+      <button class="btn ghost small" id="btn-fechar-rc" type="button">✕ Fechar</button>
+    </div>
+    <p class="pane-desc" style="margin:0 0 14px;">Lista as OS faturadas (com Data do Faturamento preenchida) no período informado, com o valor de comissão por técnico. Comissão = horas do técnico na OS × Valor da Hora × Percentual (configurados em Parâmetros → Comissão de Técnicos), reduzida a 50% quando o Tipo de OS é "<strong id="rc-tipo-reduzido-label">—</strong>".</p>
+    <div class="grid">
+      <div class="field"><label>Data de Faturamento — Início</label><input type="date" id="rc-data-ini"></div>
+      <div class="field"><label>Data de Faturamento — Fim</label><input type="date" id="rc-data-fim"></div>
+      <div class="field"><label>Região</label><select id="rc-regiao"></select></div>
+      <div class="field"><label>Base</label><select id="rc-base"></select></div>
+      <div class="field"><label>Técnico</label><select id="rc-tecnico"></select></div>
+    </div>
+    <div class="field" style="margin-top:4px;flex-direction:row;align-items:center;gap:7px;">
+      <input type="checkbox" id="rc-somente-comissionada" checked style="width:15px;height:15px;flex:0 0 auto;">
+      <label style="margin:0;" for="rc-somente-comissionada">Somente OS com Comissionada = Sim</label>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn primary small" id="btn-rc-gerar" type="button">Gerar Relatório</button>
+      <button class="btn ghost small" id="btn-rc-export-csv" type="button" style="display:none;">↓ Exportar CSV</button>
+    </div>
+    <div id="rc-resultado" style="margin-top:16px;"></div>
   </div>
 </div>
 
@@ -689,9 +732,10 @@ function defaultState(){
       periodoInicio:pIni, periodoFim:pFim, // intervalo (dias úteis) em que a meta acima está em vigor
       situacoes:{faturado:'Faturado', pendente:'Pendente', naoAplica:'Não se aplica'},
       chaveBaixaInterna:'BAIXA INTERNA',
-      faturamentoHistorico:{} // {regiao: {"YYYY-MM": valor}} — valor mensal informado manualmente p/ meses sem OS detalhada (substitui o cálculo por OS naquele mês)
+      faturamentoHistorico:{}, // {regiao: {"YYYY-MM": valor}} — valor mensal informado manualmente p/ meses sem OS detalhada (substitui o cálculo por OS naquele mês)
+      comissao:{ valorHora:0, percentual:0, tipoReduzido:'Interna' } // comissão do técnico = horas dele na OS × valorHora × (percentual/100); 50% quando Tipo de OS === tipoReduzido
     },
-    registros:{} // "id": {regiao,status,tipo,numeroOS,dataAbertura,cliente,departamento,base,tecnicos:[...],horas,valor,nfse,dataFaturamento,formaPagamento,observacao}
+    registros:{} // "id": {regiao,status,tipo,numeroOS,dataAbertura,cliente,departamento,base,tecnicos:[...],horas,valor,nfse,dataFaturamento,formaPagamento,comissionada:'Sim'|'Não',comissaoHoras:{tecnico:horas},observacao}
   };
 }
 
@@ -714,11 +758,19 @@ function withDefaults(s){
   if(!s.config.chaveBaixaInterna) s.config.chaveBaixaInterna=d.config.chaveBaixaInterna;
   if(!s.config.faturamentoHistorico || typeof s.config.faturamentoHistorico!=='object') s.config.faturamentoHistorico={};
   s.config.regioes.forEach(r=>{ if(!s.config.faturamentoHistorico[r] || typeof s.config.faturamentoHistorico[r]!=='object') s.config.faturamentoHistorico[r]={}; });
+  s.config.comissao=Object.assign({}, d.config.comissao, s.config.comissao||{});
+  if(s.config.comissao.tipoReduzido && !s.config.tiposOS.includes(s.config.comissao.tipoReduzido)) s.config.comissao.tipoReduzido=''; // tipo removido: não força mais redução
   if(!s.config.periodoInicio||!s.config.periodoFim){ const [pIni,pFim]=defaultPeriodo(); s.config.periodoInicio=s.config.periodoInicio||pIni; s.config.periodoFim=s.config.periodoFim||pFim; }
   s.registros=s.registros||{};
   Object.values(s.registros).forEach(r=>{ // retrocompat: técnico único (string) → técnicos (lista)
     if(!Array.isArray(r.tecnicos)) r.tecnicos = r.tecnico ? [r.tecnico] : [];
     if('tecnico' in r) delete r.tecnico;
+    if(r.comissionada!=='Sim' && r.comissionada!=='Não') r.comissionada='Não'; // retrocompat: lançamentos antigos não tinham esse campo — por segurança, não geram comissão até serem revisados
+    if(!r.comissaoHoras || typeof r.comissaoHoras!=='object'){ // retrocompat: divide as horas lançadas igualmente entre os técnicos como ponto de partida
+      r.comissaoHoras={};
+      const qtd=r.tecnicos.length;
+      if(qtd) r.tecnicos.forEach(t=>{ r.comissaoHoras[t]=n(r.horas)/qtd; });
+    }
   });
   return s;
 }
@@ -767,6 +819,20 @@ function buildOptions(list, current){
   if(current && !arr.includes(current)) arr.unshift(current);
   if(!arr.length) return `<option value="" disabled selected>— nenhum item cadastrado —</option>`;
   return arr.map(v=>`<option value="${escapeHtml(v)}" ${v===current?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+
+/* ---------- domínio: comissão de técnicos ---------- */
+function comissaoHorasTecnico(r, nome){ return n((r.comissaoHoras||{})[nome]); } // horas atribuídas a este técnico nesta OS (divisão manual, não o total da OS)
+function comissaoSomaHoras(r){ return Object.values(r.comissaoHoras||{}).reduce((a,v)=>a+n(v),0); } // soma já atribuída, p/ validar contra r.horas
+function comissaoFatorTipo(r){ // 50% quando o Tipo de OS é o configurado como "reduzido" em Parâmetros (por padrão, reaproveita o Tipo "Interna")
+  const cfg=state.config;
+  return (cfg.comissao.tipoReduzido && r.tipo===cfg.comissao.tipoReduzido) ? 0.5 : 1;
+}
+function comissaoValorTecnico(r, nome){ // comissão = horas do técnico × valor da hora × percentual, só quando Comissionada=Sim e a OS está Faturada (tem Data do Faturamento)
+  const cfg=state.config;
+  if(r.comissionada!=='Sim') return 0;
+  if(computeSituacao(r)!==cfg.situacoes.faturado) return 0;
+  return comissaoHorasTecnico(r,nome) * n(cfg.comissao.valorHora) * (n(cfg.comissao.percentual)/100) * comissaoFatorTipo(r);
 }
 
 /* =========================================================================
@@ -1577,6 +1643,43 @@ function atualizarDepartamentoModal(){
     sel.dataset.bloqueado='0';
   }
 }
+function lerComissaoHorasModal(){
+  const out={};
+  document.querySelectorAll('#m-comissao-horas input[data-comissao-tecnico]').forEach(inp=>{ out[inp.dataset.comissaoTecnico]=n(inp.value); });
+  return out;
+}
+function atualizarComissaoResumo(){
+  const resumo=document.getElementById('m-comissao-resumo'); if(!resumo) return;
+  const total=n(document.getElementById('m-horas').value);
+  const atribuido=Object.values(lerComissaoHorasModal()).reduce((a,v)=>a+v,0);
+  const estourou = atribuido > total + 0.01;
+  resumo.innerHTML = `— atribuído: <strong style="${estourou?'color:var(--ferrugem);':''}">${horasFmt(atribuido)} h</strong> de ${horasFmt(total)} h lançadas${estourou?' ⚠':''}`;
+}
+let comissaoHorasOriginal={}; // snapshot do comissaoHoras salvo da OS em edição, usado como valor padrão ao (re)montar os campos de divisão
+function atualizarComissaoHorasModal(){
+  const nomes=lerTecnicosModal();
+  const totalHoras=n(document.getElementById('m-horas').value);
+  const cont=document.getElementById('m-comissao-horas');
+  if(!nomes.length){
+    cont.innerHTML=`<span class="vazio">Selecione ao menos um técnico para dividir as horas de comissão.</span>`;
+    atualizarComissaoResumo();
+    return;
+  }
+  const atuais={};
+  cont.querySelectorAll('input[data-comissao-tecnico]').forEach(inp=>{ atuais[inp.dataset.comissaoTecnico]=inp.value; });
+  cont.innerHTML = nomes.map(nome=>{
+    let v;
+    if(nome in atuais) v=atuais[nome];
+    else if(nome in comissaoHorasOriginal) v=comissaoHorasOriginal[nome];
+    else v = nomes.length===1 ? totalHoras : 0;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+      <span style="flex:1;font-size:.86rem;">${escapeHtml(nome)}</span>
+      <input type="number" step="0.01" min="0" style="width:110px;" data-comissao-tecnico="${escapeHtml(nome)}" value="${v}">
+    </div>`;
+  }).join('');
+  cont.querySelectorAll('input[data-comissao-tecnico]').forEach(inp=>inp.addEventListener('input', atualizarComissaoResumo));
+  atualizarComissaoResumo();
+}
 function lerFormModal(){
   const tipo=document.getElementById('m-tipo').value;
   return {
@@ -1591,6 +1694,8 @@ function lerFormModal(){
     tecnicos: lerTecnicosModal(),
     horas: n(document.getElementById('m-horas').value),
     valor: n(document.getElementById('m-valor').value),
+    comissionada: document.getElementById('m-comissionada').value,
+    comissaoHoras: lerComissaoHorasModal(),
     nfse: document.getElementById('m-nfse').value.trim(),
     dataFaturamento: document.getElementById('m-dataFaturamento').value,
     formaPagamento: document.getElementById('m-formaPagamento').value,
@@ -1611,6 +1716,9 @@ function preencherModal(r){
   preencherTecnicosModal(cfg.tecnicos, r.tecnicos||[]);
   document.getElementById('m-horas').value = n(r.horas);
   document.getElementById('m-valor').value = n(r.valor);
+  document.getElementById('m-comissionada').value = r.comissionada||'';
+  comissaoHorasOriginal = Object.assign({}, r.comissaoHoras||{});
+  atualizarComissaoHorasModal();
   document.getElementById('m-nfse').value = r.nfse||'';
   document.getElementById('m-dataFaturamento').value = r.dataFaturamento||'';
   preencherSelectModal('m-formaPagamento', cfg.formasPagamento, r.formaPagamento);
@@ -1645,11 +1753,19 @@ function fecharModalOS(){ document.getElementById('modal-os').style.display='non
   el.addEventListener('input', atualizarSituacaoModal); el.addEventListener('change', atualizarSituacaoModal);
 });
 document.getElementById('m-tipo').addEventListener('change', atualizarDepartamentoModal);
+document.getElementById('m-tecnicos').addEventListener('change', atualizarComissaoHorasModal);
+document.getElementById('m-horas').addEventListener('input', atualizarComissaoResumo);
 document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalOS);
 document.getElementById('modal-os').addEventListener('click', e=>{ if(e.target.id==='modal-os') fecharModalOS(); });
 document.getElementById('btn-salvar-os').addEventListener('click', ()=>{
   const dados=lerFormModal();
   if(!dados.cliente){ toast('Informe o cliente.'); return; }
+  if(!dados.comissionada){ toast('Selecione se a OS é Comissionada (Sim ou Não).'); return; }
+  const somaComissao=Object.values(dados.comissaoHoras).reduce((a,v)=>a+n(v),0);
+  if(somaComissao > dados.horas + 0.01){
+    toast(`A soma das horas de comissão (${horasFmt(somaComissao)} h) não pode ultrapassar as horas lançadas (${horasFmt(dados.horas)} h).`);
+    return;
+  }
   const id=editandoId||uid();
   const criando=!editandoId;
   state.registros[id]=dados;
@@ -1690,6 +1806,86 @@ document.getElementById('inp-import-json').addEventListener('change', e=>{
 });
 
 /* =========================================================================
+   RELATÓRIO DE COMISSÃO
+   ========================================================================= */
+function gerarLinhasComissao(filtros){
+  const cfg=state.config;
+  const linhas=[];
+  Object.values(state.registros).forEach(r=>{
+    if(computeSituacao(r)!==cfg.situacoes.faturado) return; // comissão só fecha com a OS Faturada (Data do Faturamento preenchida)
+    const df=(r.dataFaturamento||'').trim(); if(!df) return;
+    if(filtros.dataIni && df<filtros.dataIni) return;
+    if(filtros.dataFim && df>filtros.dataFim) return;
+    if(filtros.regiao && r.regiao!==filtros.regiao) return;
+    if(filtros.base && r.base!==filtros.base) return;
+    if(filtros.somenteComissionada && r.comissionada!=='Sim') return;
+    (r.tecnicos||[]).forEach(nome=>{
+      if(filtros.tecnico && nome!==filtros.tecnico) return;
+      linhas.push({ r, tecnico:nome, horas:comissaoHorasTecnico(r,nome), valor:comissaoValorTecnico(r,nome) });
+    });
+  });
+  linhas.sort((a,b)=>(a.r.dataFaturamento||'').localeCompare(b.r.dataFaturamento||''));
+  return linhas;
+}
+function relatorioComissaoHtml(linhas){
+  if(!linhas.length) return `<div class="sugestoes-ok">Nenhuma OS encontrada para os filtros selecionados.</div>`;
+  const porTecnico={};
+  let totalGeral=0;
+  const linhasHtml = linhas.map(l=>{
+    const reduzida = comissaoFatorTipo(l.r)===0.5;
+    porTecnico[l.tecnico]=(porTecnico[l.tecnico]||0)+l.valor;
+    totalGeral+=l.valor;
+    return `<tr><td>${escapeHtml(l.r.numeroOS||'—')}</td><td>${l.r.dataFaturamento?ddmm(D(l.r.dataFaturamento)):'—'}</td><td>${escapeHtml(l.r.regiao||'')}</td><td>${escapeHtml(l.r.base||'')}</td><td>${escapeHtml(l.r.tipo||'')}${reduzida?' <span class="fonte-tag fonte-reduzida">50%</span>':''}</td><td class="cel-cliente">${escapeHtml(l.r.cliente||'')}</td><td>${escapeHtml(l.tecnico)}</td><td class="num">${horasFmt(l.horas)}</td><td>${escapeHtml(l.r.comissionada||'—')}</td><td class="num">${brl(l.valor)}</td></tr>`;
+  }).join('');
+  const totaisPorTecnico = Object.keys(porTecnico).sort((a,b)=>a.localeCompare(b,'pt-BR')).map(t=>
+    `<tr style="font-weight:600;"><td colspan="9">Total — ${escapeHtml(t)}</td><td class="num">${brl(porTecnico[t])}</td></tr>`).join('');
+  return `<div class="tablewrap"><table class="dt">
+    <thead><tr><th>Nº OS</th><th>Data Fat.</th><th>Regional</th><th>Base</th><th>Tipo</th><th>Cliente</th><th>Técnico</th><th class="r">Horas</th><th>Comissionada</th><th class="r">Valor Comissão</th></tr></thead>
+    <tbody>${linhasHtml}${totaisPorTecnico}<tr style="font-weight:700;border-top:2px solid var(--areia-escura);"><td colspan="9">Total Geral</td><td class="num">${brl(totalGeral)}</td></tr></tbody>
+  </table></div>`;
+}
+let _relatorioComissaoAtual=[];
+function abrirRelatorioComissao(){
+  const cfg=state.config;
+  fillFilterSelect('rc-regiao', cfg.regioes, 'Todas as regiões');
+  fillFilterSelect('rc-base', cfg.bases, 'Todas as bases');
+  fillFilterSelect('rc-tecnico', cfg.tecnicos, 'Todos os técnicos');
+  document.getElementById('rc-data-ini').value = cfg.periodoInicio||'';
+  document.getElementById('rc-data-fim').value = cfg.periodoFim||'';
+  document.getElementById('rc-somente-comissionada').checked = true;
+  document.getElementById('rc-tipo-reduzido-label').textContent = cfg.comissao.tipoReduzido || '—';
+  document.getElementById('rc-resultado').innerHTML='';
+  document.getElementById('btn-rc-export-csv').style.display='none';
+  _relatorioComissaoAtual=[];
+  document.getElementById('modal-relatorio-comissao').style.display='flex';
+}
+document.getElementById('btn-relatorio-comissao').addEventListener('click', abrirRelatorioComissao);
+document.getElementById('btn-fechar-rc').addEventListener('click', ()=>{ document.getElementById('modal-relatorio-comissao').style.display='none'; });
+document.getElementById('modal-relatorio-comissao').addEventListener('click', e=>{ if(e.target.id==='modal-relatorio-comissao') document.getElementById('modal-relatorio-comissao').style.display='none'; });
+document.getElementById('btn-rc-gerar').addEventListener('click', ()=>{
+  const filtros={
+    dataIni: document.getElementById('rc-data-ini').value,
+    dataFim: document.getElementById('rc-data-fim').value,
+    regiao: document.getElementById('rc-regiao').value,
+    base: document.getElementById('rc-base').value,
+    tecnico: document.getElementById('rc-tecnico').value,
+    somenteComissionada: document.getElementById('rc-somente-comissionada').checked
+  };
+  _relatorioComissaoAtual = gerarLinhasComissao(filtros);
+  document.getElementById('rc-resultado').innerHTML = relatorioComissaoHtml(_relatorioComissaoAtual);
+  document.getElementById('btn-rc-export-csv').style.display = _relatorioComissaoAtual.length ? '' : 'none';
+});
+document.getElementById('btn-rc-export-csv').addEventListener('click', ()=>{
+  let csv='NumeroOS;DataFaturamento;Regiao;Base;Tipo;Cliente;Tecnico;HorasComissao;Comissionada;Reduzida50;ValorComissao\n';
+  _relatorioComissaoAtual.forEach(l=>{
+    const reduzida = comissaoFatorTipo(l.r)===0.5 ? 'Sim':'Não';
+    csv+=`${l.r.numeroOS||''};${l.r.dataFaturamento||''};${l.r.regiao||''};${l.r.base||''};${l.r.tipo||''};${(l.r.cliente||'').replace(/;/g,',')};${l.tecnico};${l.horas.toFixed(2)};${l.r.comissionada||''};${reduzida};${l.valor.toFixed(2)}\n`;
+  });
+  download('relatorio_comissao.csv', csv, 'text/csv;charset=utf-8');
+  toast('CSV exportado.');
+});
+
+/* =========================================================================
    RENDER — PARÂMETROS
    ========================================================================= */
 function _renderParametros0(){
@@ -1717,6 +1913,10 @@ function _renderParametros0(){
   renderListaStatus();
   renderListaTipos();
   renderListaSimples('#tbl-p-tecnicos', cfg.tecnicos, 'tecnicos');
+  document.getElementById('p-com-valorhora').value = cfg.comissao.valorHora;
+  document.getElementById('p-com-percentual').value = cfg.comissao.percentual;
+  document.getElementById('p-com-tiporeduzido').innerHTML = `<option value="">— nenhum —</option>` +
+    cfg.tiposOS.map(t=>`<option value="${escapeHtml(t)}" ${t===cfg.comissao.tipoReduzido?'selected':''}>${escapeHtml(t)}</option>`).join('');
   renderListaSimples('#tbl-p-departamentos', cfg.departamentos, 'departamentos');
   renderListaSimples('#tbl-p-bases', cfg.bases, 'bases');
   renderListaSimples('#tbl-p-formapgto', cfg.formasPagamento, 'formasPagamento');
@@ -1806,6 +2006,10 @@ document.getElementById('pane-parametros').addEventListener('click', e=>{
   if(chave==='tiposOS'){
     state.config.tiposComDepartamento=state.config.tiposComDepartamento.filter(x=>state.config.tiposOS.includes(x));
     dirtyConfig.add('tiposComDepartamento');
+    if(state.config.comissao.tipoReduzido && !state.config.tiposOS.includes(state.config.comissao.tipoReduzido)){
+      state.config.comissao.tipoReduzido='';
+      dirtyConfig.add('comissao');
+    }
   }
   dirtyConfig.add(chave); save(); renderParametros(); renderAll();
 });
@@ -1841,7 +2045,10 @@ document.getElementById('btn-salvar-params').addEventListener('click', ()=>{
   cfg.situacoes.pendente = document.getElementById('p-sit-pen').value.trim() || 'Pendente';
   cfg.situacoes.naoAplica = document.getElementById('p-sit-na').value.trim() || 'Não se aplica';
   cfg.chaveBaixaInterna = document.getElementById('p-chave-interna').value.trim();
-  dirtyConfig.add('situacoes'); dirtyConfig.add('chaveBaixaInterna');
+  cfg.comissao.valorHora = n(document.getElementById('p-com-valorhora').value);
+  cfg.comissao.percentual = n(document.getElementById('p-com-percentual').value);
+  cfg.comissao.tipoReduzido = document.getElementById('p-com-tiporeduzido').value;
+  dirtyConfig.add('situacoes'); dirtyConfig.add('chaveBaixaInterna'); dirtyConfig.add('comissao');
   save(); renderParametros(); renderAll(); toast('Parâmetros salvos.');
 });
 document.getElementById('btn-reset').addEventListener('click', ()=>{
@@ -2040,7 +2247,7 @@ document.getElementById('btn-ms-login').addEventListener('click', async ()=>{
 /* ---------- concorrência (ETag + mesclagem por registro/seção) ---------- */
 let cloudEtag=null, acessoEtag=null;
 const dirtyReg=new Set();       // ids de registros alterados (ou excluídos) localmente
-const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, statusFechados, tiposOS, tiposComDepartamento, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna, faturamentoHistorico
+const dirtyConfig=new Set();    // seções de config alteradas: regioes, statusOS, statusFechados, tiposOS, tiposComDepartamento, tecnicos, departamentos, bases, formasPagamento, metas, periodo, situacoes, chaveBaixaInterna, faturamentoHistorico, comissao
 let salvando=false, pendente=false;
 
 function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status'); if(!el) return; el.textContent=txt; el.className='sync-status '+(cls||''); el.style.display=txt?'block':'none'; }
@@ -2048,7 +2255,7 @@ function setSyncStatus(txt,cls){ const el=document.getElementById('sync-status')
 function aplicarLocalSobre(base){
   const res={ config: clone(base.config||state.config), registros: clone(base.registros||{}) };
   dirtyReg.forEach(id=>{ if(state.registros[id]) res.registros[id]=clone(state.registros[id]); else delete res.registros[id]; });
-  ['regioes','statusOS','statusFechados','tiposOS','tiposComDepartamento','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna','faturamentoHistorico'].forEach(sec=>{
+  ['regioes','statusOS','statusFechados','tiposOS','tiposComDepartamento','tecnicos','departamentos','bases','formasPagamento','metas','situacoes','chaveBaixaInterna','faturamentoHistorico','comissao'].forEach(sec=>{
     if(dirtyConfig.has(sec)) res.config[sec]=clone(state.config[sec]);
   });
   if(dirtyConfig.has('periodo')){ res.config.periodoInicio=state.config.periodoInicio; res.config.periodoFim=state.config.periodoFim; }
