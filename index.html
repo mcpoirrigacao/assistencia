@@ -2362,7 +2362,7 @@ async function initAuth(){
 }
 function updateLoginUI(){
   const lbl=document.getElementById('ms-login-label'), info=document.getElementById('ms-user-info');
-  if(msAccount){ lbl.textContent='✓ '+(msAccount.name||msAccount.username); info.textContent='SharePoint › '+SP_PASTA; info.style.display='block'; }
+  if(msAccount){ lbl.textContent='✓ '+(msAccount.name||msAccount.username); const rs=rolesAtuais(); info.textContent='SharePoint › '+SP_PASTA+(rs.length?' · Azure: '+rs.join(', '):''); info.style.display='block'; }
   else{ lbl.textContent='🔑 Entrar com Microsoft'; info.style.display='none'; }
 }
 async function flushPendingSave(){
@@ -2523,12 +2523,23 @@ async function saveAcesso(){
 
 /* ---------- controle de acesso (admin / comum) ---------- */
 function emailAtual(){ return msAccount ? (msAccount.username||'').toLowerCase() : ''; }
+/* Funções do app (App roles) do registro Azure "MCPO API Github".
+   Têm prioridade sobre as listas de e-mail, que ficam como reserva na transição. */
+const ROLES_ADMIN = ['MCPO.Admin','Assistencia.Admin'];
+const ROLES_COMUM = ['Assistencia.Comum'];
+function rolesAtuais(){
+  const r = msAccount && msAccount.idTokenClaims && msAccount.idTokenClaims.roles;
+  return Array.isArray(r) ? r : [];
+}
 function nivelAcesso(){
   if(!msAccount) return msalReady ? 'deslogado' : 'local';
+  const roles=rolesAtuais();
+  if(roles.some(r=>ROLES_ADMIN.includes(r))) return 'admin';
+  if(roles.some(r=>ROLES_COMUM.includes(r))) return 'comum';
   const e=emailAtual();
   if(acesso.emailsAutorizados.map(x=>x.toLowerCase()).includes(e)) return 'admin';
   if(acesso.emailsComuns.map(x=>x.toLowerCase()).includes(e)) return 'comum';
-  if(!acesso.emailsAutorizados.length && !acesso.emailsComuns.length) return 'admin';
+  // Sem função no Azure e fora das listas: bloqueado (não vira mais admin quando a lista está vazia).
   return 'bloqueado';
 }
 function applyAccess(){
